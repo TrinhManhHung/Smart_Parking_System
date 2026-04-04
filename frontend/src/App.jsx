@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/Login'
 import Register from './components/Register'
@@ -9,7 +9,20 @@ import SeatBooking from './components/SeatBooking'
 import Navigation from './components/Navigation'
 
 function App() {
-  const token = localStorage.getItem('token')
+  const [token, setToken] = useState(localStorage.getItem('token'))
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setToken(localStorage.getItem('token'))
+    }
+
+    // Listen for custom auth events
+    window.addEventListener('authChange', handleAuthChange)
+    
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange)
+    }
+  }, [])
 
   return (
     <Router>

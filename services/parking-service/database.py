@@ -1,6 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from datetime import datetime
 
 DATABASE_URL = "sqlite:///./parking.db"
 
@@ -27,9 +28,20 @@ class Seat(Base):
     parking_id = Column(Integer, ForeignKey("parkings.id"))
     row = Column(Integer)
     col = Column(Integer)
-    seat_type = Column(String, default="standard")  # "standard" or "vip"
+    seat_type = Column(String, default="standard")  # Giữ lại để tương thích, nhưng tất cả sẽ là "standard"
     status = Column(String, default="available")  # "available" or "booked"
     price_per_hour = Column(Float)
+
+class SeatReservation(Base):
+    __tablename__ = "seat_reservations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    seat_id = Column(Integer, ForeignKey("seats.id"))
+    user_id = Column(Integer)  # ID của người đặt
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    status = Column(String, default="active")  # "active", "completed", "cancelled"
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
@@ -46,12 +58,17 @@ def seed_data():
             db.add(parking)
             db.flush()
             
-            # Create 5 rows × 8 cols grid
+            # Create 5 rows × 8 cols grid - tất cả đều là standard với cùng giá
             for row in range(1, 6):
                 for col in range(1, 9):
-                    seat_type = "vip" if row <= 2 else "standard"
-                    price = parking.rate_per_hour * 1.6 if seat_type == "vip" else parking.rate_per_hour
-                    seat = Seat(parking_id=parking.id, row=row, col=col, seat_type=seat_type, status="available", price_per_hour=price)
+                    seat = Seat(
+                        parking_id=parking.id, 
+                        row=row, 
+                        col=col, 
+                        seat_type="standard", 
+                        status="available", 
+                        price_per_hour=parking.rate_per_hour
+                    )
                     db.add(seat)
         db.commit()
     db.close()

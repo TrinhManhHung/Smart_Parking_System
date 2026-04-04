@@ -22,6 +22,8 @@ function Register() {
     try {
       const response = await authAPI.register(formData)
       localStorage.setItem('token', response.data.access_token)
+      // Dispatch custom event to notify App component
+      window.dispatchEvent(new Event('authChange'))
       navigate('/dashboard')
     } catch (error) {
       setError('Registration failed')

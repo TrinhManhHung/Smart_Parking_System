@@ -59,17 +59,23 @@ async def get_parking(parking_id: int):
         return response.json()
 
 @router.get("/parkings/{parking_id}/seats")
-async def get_parking_seats(parking_id: int):
+async def get_parking_seats(parking_id: int, request: Request):
+    query_params = str(request.url.query)
+    url = f"http://parking-service:8002/parkings/{parking_id}/seats"
+    if query_params:
+        url += f"?{query_params}"
+    
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"http://parking-service:8002/parkings/{parking_id}/seats")
+        response = await client.get(url)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
 
 @router.post("/seats/{seat_id}/book")
-async def book_seat(seat_id: int):
+async def book_seat(seat_id: int, request: Request):
+    body = await request.json()
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"http://parking-service:8002/seats/{seat_id}/book")
+        response = await client.post(f"http://parking-service:8002/seats/{seat_id}/book", json=body)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()

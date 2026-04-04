@@ -22,8 +22,20 @@ export const authAPI = {
 export const parkingAPI = {
   getAllParkings: () => api.get('/parkings'),
   getParkingById: (id) => api.get(`/parkings/${id}`),
-  getParkingSeats: (parkingId) => api.get(`/parkings/${parkingId}/seats`),
+  getParkingSeats: (parkingId, startTime = null, endTime = null) => {
+    let url = `/parkings/${parkingId}/seats`
+    if (startTime && endTime) {
+      url += `?start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}`
+    }
+    return api.get(url)
+  },
   bookSeat: (seatId) => api.post(`/seats/${seatId}/book`),
+  bookSeatWithTime: (seatId, startTime, endTime, userId = 1) => 
+    api.post(`/seats/${seatId}/book`, {
+      start_time: startTime,
+      end_time: endTime,
+      user_id: userId
+    }),
   releaseSeat: (seatId) => api.post(`/seats/${seatId}/release`),
 }
 

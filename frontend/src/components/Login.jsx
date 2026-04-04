@@ -22,6 +22,8 @@ function Login() {
     try {
       const response = await authAPI.login(formData)
       localStorage.setItem('token', response.data.access_token)
+      // Dispatch custom event to notify App component
+      window.dispatchEvent(new Event('authChange'))
       navigate('/dashboard')
     } catch (error) {
       setError('Invalid credentials')

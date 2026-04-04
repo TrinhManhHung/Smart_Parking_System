@@ -16,14 +16,23 @@ function SeatBooking() {
 
   useEffect(() => {
     fetchParkingAndSeats()
-  }, [parkingId])
+  }, [parkingId, startTime, duration])
 
   const fetchParkingAndSeats = async () => {
     try {
       const parkingRes = await parkingAPI.getParkingById(parkingId)
       setParking(parkingRes.data)
       
-      const seatsRes = await parkingAPI.getParkingSeats(parkingId)
+      // Tính toán thời gian kết thúc
+      const checkInTime = new Date(startTime)
+      const checkOutTime = new Date(checkInTime.getTime() + duration * 3600000)
+      
+      // Lấy danh sách chỗ ngồi với kiểm tra tính khả dụng theo thời gian
+      const seatsRes = await parkingAPI.getParkingSeats(
+        parkingId, 
+        checkInTime.toISOString(), 
+        checkOutTime.toISOString()
+      )
       setSeats(seatsRes.data)
     } catch (err) {
       setError('Failed to load parking and seats')
@@ -49,7 +58,7 @@ function SeatBooking() {
 
   const handleBooking = async () => {
     if (selectedSeats.length === 0) {
-      setError('Please select at least one seat')
+      setError('Please select at least one parking spot')
       return
     }
 
@@ -65,9 +74,14 @@ function SeatBooking() {
         check_out_time: checkOutTime.toISOString()
       })
 
-      // Book seats
+      // Book seats với thời gian cụ thể
       for (const seat of selectedSeats) {
-        await parkingAPI.bookSeat(seat.id)
+        await parkingAPI.bookSeatWithTime(
+          seat.id, 
+          checkInTime.toISOString(), 
+          checkOutTime.toISOString(),
+          1 // user_id
+        )
       }
 
       // Create reservation
@@ -90,7 +104,7 @@ function SeatBooking() {
 
   return (
     <div className="seat-booking">
-      <h1>{parking.name} - Select Seats</h1>
+      <h1>{parking.name} - Select Parking Spots</h1>
       
       {error && <div className="error">{error}</div>}
 
@@ -100,18 +114,22 @@ function SeatBooking() {
             <div><span className="seat available"></span> Available</div>
             <div><span className="seat selected"></span> Selected</div>
             <div><span className="seat booked"></span> Booked</div>
-            <div><span className="seat vip"></span> VIP ($higher)</div>
           </div>
 
           <div className="seat-grid">
+            <div className="parking-lot-header">
+              <h3>🚗 Parking Layout</h3>
+              <p>Select your preferred parking spots</p>
+            </div>
             {[...Array(5)].map((_, row) => (
               <div key={row} className="seat-row">
+                <div className="row-label">Row {row + 1}</div>
                 {[...Array(8)].map((_, col) => {
                   const seat = seats.find(s => s.row === row + 1 && s.col === col + 1)
-                  if (!seat) return <div key={col}></div>
+                  if (!seat) return <div key={col} className="empty-spot"></div>
                   
                   const isSelected = selectedSeats.some(s => s.id === seat.id)
-                  const seatClass = `seat ${seat.status} ${seat.seat_type} ${isSelected ? 'selected' : ''}`
+                  const seatClass = `seat ${seat.status} ${isSelected ? 'selected' : ''}`
                   
                   return (
                     <button
@@ -121,10 +139,12 @@ function SeatBooking() {
                       disabled={seat.status === 'booked'}
                       title={`Row ${seat.row}, Col ${seat.col} - $${seat.price_per_hour}/hr`}
                     >
-                      {row + 1}-{col + 1}
+                      <div className="seat-number">{row + 1}-{col + 1}</div>
+                      <div className="seat-price">${seat.price_per_hour}/h</div>
                     </button>
                   )
                 })}
+                <div className="row-label">Row {row + 1}</div>
               </div>
             ))}
           </div>
@@ -155,13 +175,40 @@ function SeatBooking() {
           </div>
 
           <div className="selected-seats">
-            <h4>Selected Seats ({selectedSeats.length}):</h4>
+            <div className="selected-seats-header">
+              <h4>Selected Spots ({selectedSeats.length}):</h4>
+              {selectedSeats.length > 0 && (
+                <button 
+                  className="clear-all-btn"
+                  onClick={() => setSelectedSeats([])}
+                  title="Clear all selected spots"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
             <ul>
-              {selectedSeats.map(seat => (
-                <li key={seat.id}>
-                  Row {seat.row}, Col {seat.col} ({seat.seat_type}) - ${(seat.price_per_hour * duration).toFixed(2)}
+              {selectedSeats.length === 0 ? (
+                <li className="no-seats-selected">
+                  <span>No parking spots selected</span>
+                  <span className="hint">👆 Click on available spots above</span>
                 </li>
-              ))}
+              ) : (
+                selectedSeats.map(seat => (
+                  <li key={seat.id}>
+                    <div className="seat-info">
+                      <span>Row {seat.row}, Col {seat.col} - ${(seat.price_per_hour * duration).toFixed(2)}</span>
+                      <button 
+                        className="remove-seat-btn"
+                        onClick={() => toggleSeat(seat)}
+                        title="Remove this spot"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
 

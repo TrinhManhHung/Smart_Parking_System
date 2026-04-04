@@ -1,11 +1,14 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import '../styles/Navigation.css'
 
 function Navigation() {
   const navigate = useNavigate()
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    // Dispatch custom event to notify App component
+    window.dispatchEvent(new Event('authChange'))
     navigate('/login')
   }
 
