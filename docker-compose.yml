@@ -1,86 +1,80 @@
-# Docker Compose — Multi-container orchestration
-# Run: docker compose up --build
-# Docs: https://docs.docker.com/compose/
+version: '3.8'
 
 services:
-  # ─── Frontend ────────────────────────────────────
-  frontend:
-    build: ./frontend
+  auth-service:
+    build: ./services/auth-service
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
-    depends_on:
-      - gateway
-    networks:
-      - app-network
+      - "8001:8001"
+    volumes:
+      - ./services/auth-service:/app
+    environment:
+      - PYTHONPATH=/app
 
-  # ─── API Gateway ─────────────────────────────────
+  parking-service:
+    build: ./services/parking-service
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./services/parking-service:/app
+    environment:
+      - PYTHONPATH=/app
+
+  reservation-service:
+    build: ./services/reservation-service
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./services/reservation-service:/app
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - parking-service
+
+  recommendation-service:
+    build: ./services/recommendation-service
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./services/recommendation-service:/app
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - parking-service
+
+  payment-service:
+    build: ./services/payment-service
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./services/payment-service:/app
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - parking-service
+
   gateway:
     build: ./gateway
     ports:
-      - "${GATEWAY_PORT:-8080}:8000"
+      - "8000:8000"
+    volumes:
+      - ./gateway:/app
+    environment:
+      - PYTHONPATH=/app
     depends_on:
-      - service-a
-      - service-b
-    networks:
-      - app-network
+      - auth-service
+      - parking-service
+      - reservation-service
+      - recommendation-service
+      - payment-service
 
-  # ─── Service A ───────────────────────────────────
-  service-a:
-    build: ./services/service-a
+  frontend:
+    build: ./frontend
     ports:
-      - "${SERVICE_A_PORT:-5001}:5000"
-    env_file:
-      - .env
-    networks:
-      - app-network
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-
-  # ─── Service B ───────────────────────────────────
-  service-b:
-    build: ./services/service-b
-    ports:
-      - "${SERVICE_B_PORT:-5002}:5000"
-    env_file:
-      - .env
-    networks:
-      - app-network
-
-  # ─── Shared Infrastructure (uncomment as needed) ─
-  # db:
-  #   image: postgres:16-alpine    # or mysql:8, mongo:7, etc.
-  #   ports:
-  #     - "${DB_PORT:-5432}:5432"
-  #   environment:
-  #     POSTGRES_DB: ${DB_NAME:-mydb}
-  #     POSTGRES_USER: ${DB_USER:-admin}
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
-  #   volumes:
-  #     - db-data:/var/lib/postgresql/data
-  #   networks:
-  #     - app-network
-
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
-  #   networks:
-  #     - app-network
-
-  # rabbitmq:
-  #   image: rabbitmq:3-management-alpine
-  #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
-  #   networks:
-  #     - app-network
-
-networks:
-  app-network:
-    driver: bridge
-
-# volumes:
-#   db-data:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+    depends_on:
+      - gateway
