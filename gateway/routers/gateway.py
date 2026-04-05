@@ -181,3 +181,263 @@ async def calculate_payment(request: Request):
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
+
+
+# User Profile Routes
+@router.get("/profile")
+async def get_profile(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "http://auth-service:8001/profile",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.put("/profile")
+async def update_profile(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(
+            "http://auth-service:8001/profile",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+# Vehicle Routes
+@router.get("/vehicles")
+async def get_vehicles(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "http://auth-service:8001/vehicles",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.post("/vehicles")
+async def create_vehicle(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://auth-service:8001/vehicles",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.put("/vehicles/{vehicle_id}")
+async def update_vehicle(vehicle_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(
+            f"http://auth-service:8001/vehicles/{vehicle_id}",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.delete("/vehicles/{vehicle_id}")
+async def delete_vehicle(vehicle_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"http://auth-service:8001/vehicles/{vehicle_id}",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+# Payment Methods Routes
+@router.get("/payment-methods")
+async def get_payment_methods(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "http://auth-service:8001/payment-methods",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.post("/payment-methods")
+async def create_payment_method(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://auth-service:8001/payment-methods",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.put("/payment-methods/{payment_id}")
+async def update_payment_method(payment_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(
+            f"http://auth-service:8001/payment-methods/{payment_id}",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.delete("/payment-methods/{payment_id}")
+async def delete_payment_method(payment_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"http://auth-service:8001/payment-methods/{payment_id}",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+# Favorite Parkings Routes
+@router.get("/favorites")
+async def get_favorites(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "http://auth-service:8001/favorites",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.post("/favorites")
+async def add_favorite(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://auth-service:8001/favorites",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.put("/favorites/{favorite_id}")
+async def update_favorite(favorite_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(
+            f"http://auth-service:8001/favorites/{favorite_id}",
+            json=body,
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.delete("/favorites/{favorite_id}")
+async def remove_favorite(favorite_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"http://auth-service:8001/favorites/{favorite_id}",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+# Statistics Routes
+@router.get("/statistics")
+async def get_statistics(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "http://reservation-service:8003/statistics",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.get("/history")
+async def get_history(request: Request, limit: int = 50, offset: int = 0):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"http://reservation-service:8003/history?limit={limit}&offset={offset}",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()

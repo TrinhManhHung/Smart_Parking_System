@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard'
 import Recommendations from './components/Recommendations'
 import Reservations from './components/Reservations'
 import SeatBooking from './components/SeatBooking'
+import Profile from './components/Profile'
 import Navigation from './components/Navigation'
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
             <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
             <Route path="/recommendations" element={token ? <Recommendations /> : <Navigate to="/login" />} />
             <Route path="/reservations" element={token ? <Reservations /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={token ? <Profile /> : <Navigate to="/login" />} />
             <Route path="/parking/:parkingId/seats" element={token ? <SeatBooking /> : <Navigate to="/login" />} />
             <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
             <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} />} />

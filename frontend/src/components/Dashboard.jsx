@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { parkingAPI, reservationAPI } from '../api/api'
+import { parkingAPI, reservationAPI, userAPI } from '../api/api'
 import '../styles/Dashboard.css'
 
 function Dashboard() {
@@ -30,11 +30,40 @@ function Dashboard() {
 
   const handleReserve = async (parkingId) => {
     try {
-      await reservationAPI.createReservation({ parking_id: parkingId })
-      alert('Reservation created successfully!')
+      // Quick book: auto-set time to now + 2 hours
+      const now = new Date()
+      const checkInTime = new Date(now.getTime() + 5 * 60000) // 5 minutes from now
+      const checkOutTime = new Date(checkInTime.getTime() + 2 * 60 * 60000) // 2 hours later
+      
+      const reservationData = { 
+        parking_id: parkingId,
+        check_in_time: checkInTime.toISOString(),
+        check_out_time: checkOutTime.toISOString()
+      }
+      
+      console.log('Quick book data:', reservationData)
+      
+      const response = await reservationAPI.createReservation(reservationData)
+      console.log('Quick book response:', response)
+      alert('Quick booking successful! Reserved for 2 hours.')
       fetchParkings()
     } catch (error) {
-      alert('Failed to create reservation')
+      console.error('Quick book error:', error)
+      console.error('Error response:', error.response?.data)
+      alert(`Failed to create reservation: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  const handleAddToFavorites = async (parkingId) => {
+    try {
+      await userAPI.addFavorite({ parking_id: parkingId })
+      alert('Added to favorites!')
+    } catch (error) {
+      if (error.response?.data?.detail?.includes('already in favorites')) {
+        alert('This parking is already in your favorites')
+      } else {
+        alert('Failed to add to favorites')
+      }
     }
   }
 
@@ -107,6 +136,13 @@ function Dashboard() {
                   disabled={parking.available_slots === 0}
                 >
                   Quick Book
+                </button>
+                <button 
+                  className="btn btn-favorite" 
+                  onClick={() => handleAddToFavorites(parking.id)}
+                  title="Add to favorites"
+                >
+                  ⭐
                 </button>
               </div>
             </div>

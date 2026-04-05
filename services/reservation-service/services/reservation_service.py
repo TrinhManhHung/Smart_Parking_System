@@ -23,11 +23,20 @@ class ReservationService:
         return reservations
     
     async def create_reservation(self, reservation: ReservationCreate, user_id: int, db: Session):
+        # Parse datetime strings
+        check_in_time = reservation.check_in_time
+        check_out_time = reservation.check_out_time
+        
+        if isinstance(check_in_time, str):
+            check_in_time = datetime.fromisoformat(check_in_time.replace('Z', '+00:00'))
+        if isinstance(check_out_time, str):
+            check_out_time = datetime.fromisoformat(check_out_time.replace('Z', '+00:00'))
+        
         db_reservation = Reservation(
             user_id=user_id, 
             parking_id=reservation.parking_id,
-            check_in_time=reservation.check_in_time,
-            check_out_time=reservation.check_out_time
+            check_in_time=check_in_time,
+            check_out_time=check_out_time
         )
         db.add(db_reservation)
         db.commit()

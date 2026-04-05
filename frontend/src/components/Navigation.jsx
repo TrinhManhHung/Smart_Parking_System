@@ -38,6 +38,11 @@ function Navigation() {
               My Reservations
             </Link>
           </li>
+          <li>
+            <Link to="/profile" className={isActive('/profile') ? 'active' : ''}>
+              Profile
+            </Link>
+          </li>
         </ul>
 
         <button className="btn btn-logout" onClick={handleLogout}>

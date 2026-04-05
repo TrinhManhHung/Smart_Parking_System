@@ -47,6 +47,25 @@ export const reservationAPI = {
   cancelReservation: (reservationId) => api.delete(`/reservations/${reservationId}`),
 }
 
+export const userAPI = {
+  getProfile: () => api.get('/profile'),
+  updateProfile: (profileData) => api.put('/profile', profileData),
+  getVehicles: () => api.get('/vehicles'),
+  createVehicle: (vehicleData) => api.post('/vehicles', vehicleData),
+  updateVehicle: (vehicleId, vehicleData) => api.put(`/vehicles/${vehicleId}`, vehicleData),
+  deleteVehicle: (vehicleId) => api.delete(`/vehicles/${vehicleId}`),
+  getPaymentMethods: () => api.get('/payment-methods'),
+  createPaymentMethod: (paymentData) => api.post('/payment-methods', paymentData),
+  updatePaymentMethod: (paymentId, paymentData) => api.put(`/payment-methods/${paymentId}`, paymentData),
+  deletePaymentMethod: (paymentId) => api.delete(`/payment-methods/${paymentId}`),
+  getFavorites: () => api.get('/favorites'),
+  addFavorite: (favoriteData) => api.post('/favorites', favoriteData),
+  updateFavorite: (favoriteId, favoriteData) => api.put(`/favorites/${favoriteId}`, favoriteData),
+  removeFavorite: (favoriteId) => api.delete(`/favorites/${favoriteId}`),
+  getStatistics: () => api.get('/statistics'),
+  getHistory: (limit = 50, offset = 0) => api.get(`/history?limit=${limit}&offset=${offset}`),
+}
+
 export const recommendationAPI = {
   getRecommendations: (lat, lng) => api.get(`/recommendations?lat=${lat}&lng=${lng}`),
 }
