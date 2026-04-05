@@ -86,7 +86,7 @@ function Register() {
       })
       localStorage.setItem('token', response.data.access_token)
       window.dispatchEvent(new Event('authChange'))
-      navigate('/dashboard')
+      navigate('/setup')
     } catch (error) {
       setError(error.response?.data?.detail || 'Registration failed. Please try again.')
     } finally {

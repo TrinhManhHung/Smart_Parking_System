@@ -13,6 +13,10 @@ function Profile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // Edit states
+  const [editingVehicle, setEditingVehicle] = useState(null)
+  const [editingPayment, setEditingPayment] = useState(null)
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -153,6 +157,52 @@ function Profile() {
     }
   }
 
+  const handleEditVehicle = (vehicle) => {
+    setEditingVehicle(vehicle.id)
+    setVehicleForm({
+      license_plate: vehicle.license_plate,
+      vehicle_type: vehicle.vehicle_type,
+      brand: vehicle.brand || '',
+      model: vehicle.model || '',
+      color: vehicle.color || '',
+      is_default: vehicle.is_default
+    })
+  }
+
+  const handleUpdateVehicle = async (e) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    try {
+      await userAPI.updateVehicle(editingVehicle, vehicleForm)
+      setSuccess('Vehicle updated successfully!')
+      setEditingVehicle(null)
+      setVehicleForm({
+        license_plate: '',
+        vehicle_type: 'car',
+        brand: '',
+        model: '',
+        color: '',
+        is_default: false
+      })
+      await fetchVehicles()
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to update vehicle')
+    }
+  }
+
+  const handleCancelEditVehicle = () => {
+    setEditingVehicle(null)
+    setVehicleForm({
+      license_plate: '',
+      vehicle_type: 'car',
+      brand: '',
+      model: '',
+      color: '',
+      is_default: false
+    })
+  }
+
   const handleDeleteVehicle = async (vehicleId) => {
     if (!window.confirm('Are you sure you want to delete this vehicle?')) return
     try {
@@ -183,6 +233,49 @@ function Profile() {
     } catch (error) {
       setError('Failed to add payment method')
     }
+  }
+
+  const handleEditPayment = (payment) => {
+    setEditingPayment(payment.id)
+    setPaymentForm({
+      method_type: payment.method_type,
+      card_number: payment.card_number || '',
+      card_holder: payment.card_holder || '',
+      expiry_date: payment.expiry_date || '',
+      is_default: payment.is_default
+    })
+  }
+
+  const handleUpdatePayment = async (e) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    try {
+      await userAPI.updatePaymentMethod(editingPayment, paymentForm)
+      setSuccess('Payment method updated successfully!')
+      setEditingPayment(null)
+      setPaymentForm({
+        method_type: 'credit_card',
+        card_number: '',
+        card_holder: '',
+        expiry_date: '',
+        is_default: false
+      })
+      await fetchPaymentMethods()
+    } catch (error) {
+      setError('Failed to update payment method')
+    }
+  }
+
+  const handleCancelEditPayment = () => {
+    setEditingPayment(null)
+    setPaymentForm({
+      method_type: 'credit_card',
+      card_number: '',
+      card_holder: '',
+      expiry_date: '',
+      is_default: false
+    })
   }
 
   const handleDeletePaymentMethod = async (paymentId) => {
@@ -375,8 +468,8 @@ function Profile() {
             <div className="vehicles-section">
               <h2>My Vehicles</h2>
               
-              <form onSubmit={handleAddVehicle} className="add-form">
-                <h3>Add New Vehicle</h3>
+              <form onSubmit={editingVehicle ? handleUpdateVehicle : handleAddVehicle} className="add-form">
+                <h3>{editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</h3>
                 <div className="form-row">
                   <div className="form-group">
                     <label>License Plate *</label>
@@ -386,6 +479,7 @@ function Profile() {
                       onChange={(e) => setVehicleForm({...vehicleForm, license_plate: e.target.value})}
                       placeholder="e.g., ABC-1234"
                       required
+                      disabled={editingVehicle !== null}
                     />
                   </div>
                   <div className="form-group">
@@ -441,7 +535,16 @@ function Profile() {
                   />
                   <label htmlFor="vehicle-default">Set as default vehicle</label>
                 </div>
-                <button type="submit" className="btn btn-primary">Add Vehicle</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="submit" className="btn btn-primary">
+                    {editingVehicle ? 'Update Vehicle' : 'Add Vehicle'}
+                  </button>
+                  {editingVehicle && (
+                    <button type="button" className="btn btn-secondary" onClick={handleCancelEditVehicle}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </form>
 
               <div className="items-list">
@@ -457,12 +560,21 @@ function Profile() {
                         <span className="item-type">{vehicle.vehicle_type}</span>
                         {vehicle.is_default && <span className="default-badge">Default</span>}
                       </div>
-                      <button 
-                        className="btn-delete"
-                        onClick={() => handleDeleteVehicle(vehicle.id)}
-                      >
-                        🗑️
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className="btn-edit"
+                          onClick={() => handleEditVehicle(vehicle)}
+                          title="Edit vehicle"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="btn-delete"
+                          onClick={() => handleDeleteVehicle(vehicle.id)}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -475,8 +587,8 @@ function Profile() {
             <div className="payment-section">
               <h2>Payment Methods</h2>
               
-              <form onSubmit={handleAddPaymentMethod} className="add-form">
-                <h3>Add Payment Method</h3>
+              <form onSubmit={editingPayment ? handleUpdatePayment : handleAddPaymentMethod} className="add-form">
+                <h3>{editingPayment ? 'Edit Payment Method' : 'Add Payment Method'}</h3>
                 <div className="form-group">
                   <label>Payment Type *</label>
                   <select
@@ -537,7 +649,16 @@ function Profile() {
                   />
                   <label htmlFor="payment-default">Set as default payment method</label>
                 </div>
-                <button type="submit" className="btn btn-primary">Add Payment Method</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="submit" className="btn btn-primary">
+                    {editingPayment ? 'Update Payment Method' : 'Add Payment Method'}
+                  </button>
+                  {editingPayment && (
+                    <button type="button" className="btn btn-secondary" onClick={handleCancelEditPayment}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </form>
 
               <div className="items-list">
@@ -553,12 +674,21 @@ function Profile() {
                         {payment.card_holder && <p>{payment.card_holder}</p>}
                         {payment.is_default && <span className="default-badge">Default</span>}
                       </div>
-                      <button 
-                        className="btn-delete"
-                        onClick={() => handleDeletePaymentMethod(payment.id)}
-                      >
-                        🗑️
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className="btn-edit"
+                          onClick={() => handleEditPayment(payment)}
+                          title="Edit payment method"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="btn-delete"
+                          onClick={() => handleDeletePaymentMethod(payment.id)}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
