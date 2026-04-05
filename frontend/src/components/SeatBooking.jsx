@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { parkingAPI, paymentAPI, reservationAPI } from '../api/api'
+import { parkingAPI, paymentAPI, reservationAPI, userAPI } from '../api/api'
 import '../styles/SeatBooking.css'
 
 function SeatBooking() {
@@ -14,10 +14,31 @@ function SeatBooking() {
   const [startTime, setStartTime] = useState(new Date().toISOString().slice(0, 16))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentMethods, setPaymentMethods] = useState([])
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
+  const [paymentInfo, setPaymentInfo] = useState(null)
+  const [bookingLoading, setBookingLoading] = useState(false)
 
   useEffect(() => {
     fetchParkingAndSeats()
+    fetchPaymentMethods()
   }, [parkingId, startTime, duration])
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await userAPI.getPaymentMethods()
+      setPaymentMethods(response.data)
+      const defaultMethod = response.data.find(pm => pm.is_default)
+      if (defaultMethod) {
+        setSelectedPaymentMethod(defaultMethod.id)
+      } else if (response.data.length > 0) {
+        setSelectedPaymentMethod(response.data[0].id)
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error)
+    }
+  }
 
   const fetchParkingAndSeats = async () => {
     try {
@@ -67,49 +88,91 @@ function SeatBooking() {
       return
     }
 
+    if (paymentMethods.length === 0) {
+      setError('Please add a payment method in your profile first')
+      return
+    }
+
+    // Calculate payment info
+    const checkInTime = new Date(startTime)
+    const checkOutTime = new Date(checkInTime.getTime() + duration * 3600000)
+    
     try {
-      // Calculate check-in and check-out times
-      const checkInTime = new Date(startTime)
-      const checkOutTime = new Date(checkInTime.getTime() + duration * 3600000)
-      
-      // Calculate payment with proper datetime fields
       const paymentRes = await paymentAPI.calculatePayment({
         parking_id: parseInt(parkingId),
         check_in_time: checkInTime.toISOString(),
         check_out_time: checkOutTime.toISOString()
       })
+      setPaymentInfo(paymentRes.data)
+      setShowPaymentModal(true)
+    } catch (err) {
+      console.error('Payment calculation error:', err)
+      setError('Failed to calculate payment')
+    }
+  }
 
-      // Book seats với thời gian cụ thể
+  const confirmBookingAndPayment = async () => {
+    if (!selectedPaymentMethod) {
+      setError('Please select a payment method')
+      return
+    }
+
+    setBookingLoading(true)
+    setError('')
+
+    try {
+      const checkInTime = new Date(startTime)
+      const checkOutTime = new Date(checkInTime.getTime() + duration * 3600000)
+
+      // Book seats
       for (const seat of selectedSeats) {
         await parkingAPI.bookSeatWithTime(
           seat.id, 
           checkInTime.toISOString(), 
           checkOutTime.toISOString(),
-          1 // user_id
+          1
         )
       }
 
-      // Get seat number from first selected seat
-      // Convert to format like Quick Book: A-01, B-02, etc.
+      // Get seat number
       const firstSeat = selectedSeats[0]
       const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F']
       const rowLetter = rowLetters[firstSeat.row - 1] || 'A'
       const seatNumber = `${rowLetter}-${String(firstSeat.col).padStart(2, '0')}`
 
-      // Create reservation with seat number
-      const reservationRes = await reservationAPI.createReservation({
+      // Create reservation
+      await reservationAPI.createReservation({
         parking_id: parseInt(parkingId),
         check_in_time: checkInTime.toISOString(),
         check_out_time: checkOutTime.toISOString(),
         seat_number: seatNumber
       })
 
-      alert(`Booking confirmed!\nSeat: ${seatNumber}\nTotal: ${paymentRes.data.total_cost.toFixed(2)}`)
+      const paymentMethod = paymentMethods.find(pm => pm.id === selectedPaymentMethod)
+      alert(`✅ Booking & Payment Successful!\n\nSeat: ${seatNumber}\nAmount Paid: $${paymentInfo.total_cost}\nPayment Method: ${paymentMethod?.card_type} •••• ${paymentMethod?.last_four_digits}`)
+      
       navigate('/reservations')
     } catch (err) {
       console.error('Booking error:', err)
       setError('Booking failed: ' + (err.response?.data?.detail || err.message))
+    } finally {
+      setBookingLoading(false)
     }
+  }
+
+  const getPaymentMethodIcon = (cardType) => {
+    const icons = {
+      'Visa': '💳',
+      'Mastercard': '💳',
+      'American Express': '💳',
+      'Discover': '💳',
+      'PayPal': '💰',
+      'Apple Pay': '🍎',
+      'Google Pay': '🔵',
+      'CASH': '💵',
+      'CREDIT CARD': '💳'
+    }
+    return icons[cardType] || '💳'
   }
 
   if (loading) return <div>Loading...</div>
@@ -265,6 +328,109 @@ function SeatBooking() {
           </button>
         </div>
       </div>
+
+      {/* Payment Method Selection Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={() => !bookingLoading && setShowPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>💳 Complete Payment</h2>
+              <button 
+                className="modal-close"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={bookingLoading}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {paymentInfo && (
+                <div className="checkout-summary">
+                  <h3>Payment Summary</h3>
+                  <div className="summary-row">
+                    <span>Parking:</span>
+                    <span>{parking?.name}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span>Duration:</span>
+                    <span>{paymentInfo.duration_minutes} minutes ({duration} hour{duration > 1 ? 's' : ''})</span>
+                  </div>
+                  <div className="summary-row">
+                    <span>Rate:</span>
+                    <span>${paymentInfo.rate_per_hour}/hour</span>
+                  </div>
+                  <div className="summary-row">
+                    <span>Seats:</span>
+                    <span>{selectedSeats.length} spot{selectedSeats.length > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="summary-row total">
+                    <span>Total Amount:</span>
+                    <span>${paymentInfo.total_cost}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="payment-methods-list">
+                <h3>Choose Payment Method</h3>
+                {paymentMethods.length === 0 ? (
+                  <div className="no-payment-methods">
+                    <p>No payment methods available</p>
+                    <p className="hint">Please add a payment method in your profile</p>
+                  </div>
+                ) : (
+                  paymentMethods.map((method) => (
+                    <div
+                      key={method.id}
+                      className={`payment-method-item ${selectedPaymentMethod === method.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedPaymentMethod(method.id)}
+                    >
+                      <div className="payment-method-radio">
+                        <input
+                          type="radio"
+                          name="payment-method"
+                          checked={selectedPaymentMethod === method.id}
+                          onChange={() => setSelectedPaymentMethod(method.id)}
+                        />
+                      </div>
+                      <div className="payment-method-info">
+                        <div className="payment-method-header">
+                          <span className="payment-icon">{getPaymentMethodIcon(method.card_type)}</span>
+                          <span className="payment-type">{method.card_type}</span>
+                          {method.is_default && (
+                            <span className="default-badge">Default</span>
+                          )}
+                        </div>
+                        <div className="payment-method-details">
+                          <span>•••• •••• •••• {method.last_four_digits}</span>
+                          {method.expiry_date && <span className="expiry">Exp: {method.expiry_date}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={bookingLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={confirmBookingAndPayment}
+                disabled={bookingLoading || !selectedPaymentMethod}
+              >
+                {bookingLoading ? 'Processing...' : `Pay $${paymentInfo?.total_cost || '0.00'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -145,6 +145,49 @@ class ReservationService:
         if reservation.status != "checked_in":
             raise HTTPException(status_code=400, detail="Invalid reservation status")
         
+        # Release seats in parking service
+        if reservation.seat_number:
+            try:
+                async with httpx.AsyncClient() as client:
+                    # Get parking seats to find seat ID
+                    seats_response = await client.get(
+                        f"http://parking-service:8002/parkings/{reservation.parking_id}/seats"
+                    )
+                    if seats_response.status_code == 200:
+                        seats = seats_response.json()
+                        # Parse seat number (e.g., "A-01" -> row A, col 01)
+                        seat_parts = reservation.seat_number.split('-')
+                        if len(seat_parts) == 2:
+                            row_letter = seat_parts[0]
+                            col_num = int(seat_parts[1])
+                            # Convert row letter to number (A=1, B=2, etc.)
+                            row_num = ord(row_letter.upper()) - ord('A') + 1
+                            
+                            print(f"Looking for seat: row={row_num}, col={col_num}")
+                            
+                            # Find matching seat
+                            seat_found = False
+                            for seat in seats:
+                                if seat.get('row') == row_num and seat.get('col') == col_num:
+                                    print(f"Found seat ID: {seat['id']}, releasing...")
+                                    # Release the seat
+                                    release_response = await client.post(
+                                        f"http://parking-service:8002/seats/{seat['id']}/release"
+                                    )
+                                    if release_response.status_code == 200:
+                                        print(f"Seat {seat['id']} released successfully")
+                                        seat_found = True
+                                    else:
+                                        print(f"Failed to release seat: {release_response.text}")
+                                    break
+                            
+                            if not seat_found:
+                                print(f"Seat not found for {reservation.seat_number}")
+                                print(f"Available seats: {[(s.get('row'), s.get('col')) for s in seats]}")
+            except Exception as e:
+                print(f"Failed to release seat: {e}")
+                # Continue with checkout even if seat release fails
+        
         reservation.status = "completed"
         reservation.checked_out_at = datetime.utcnow()
         db.commit()
@@ -165,6 +208,48 @@ class ReservationService:
         
         if reservation.status != "reserved":
             raise HTTPException(status_code=400, detail="Cannot cancel this reservation")
+        
+        # Release seats in parking service
+        if reservation.seat_number:
+            try:
+                async with httpx.AsyncClient() as client:
+                    # Get parking seats to find seat ID
+                    seats_response = await client.get(
+                        f"http://parking-service:8002/parkings/{reservation.parking_id}/seats"
+                    )
+                    if seats_response.status_code == 200:
+                        seats = seats_response.json()
+                        # Parse seat number (e.g., "A-01" -> row A, col 01)
+                        seat_parts = reservation.seat_number.split('-')
+                        if len(seat_parts) == 2:
+                            row_letter = seat_parts[0]
+                            col_num = int(seat_parts[1])
+                            # Convert row letter to number (A=1, B=2, etc.)
+                            row_num = ord(row_letter.upper()) - ord('A') + 1
+                            
+                            print(f"Cancelling - Looking for seat: row={row_num}, col={col_num}")
+                            
+                            # Find matching seat
+                            seat_found = False
+                            for seat in seats:
+                                if seat.get('row') == row_num and seat.get('col') == col_num:
+                                    print(f"Found seat ID: {seat['id']}, releasing...")
+                                    # Release the seat
+                                    release_response = await client.post(
+                                        f"http://parking-service:8002/seats/{seat['id']}/release"
+                                    )
+                                    if release_response.status_code == 200:
+                                        print(f"Seat {seat['id']} released successfully")
+                                        seat_found = True
+                                    else:
+                                        print(f"Failed to release seat: {release_response.text}")
+                                    break
+                            
+                            if not seat_found:
+                                print(f"Seat not found for {reservation.seat_number}")
+            except Exception as e:
+                print(f"Failed to release seat: {e}")
+                # Continue with cancellation even if seat release fails
         
         db.delete(reservation)
         db.commit()

@@ -100,6 +100,10 @@ def book_seat(seat_id: int, booking_request: SeatBookingRequest, db: Session = D
         status="active"
     )
     db.add(reservation)
+    
+    # Update seat status to booked
+    seat.status = "booked"
+    
     db.commit()
     
     return {"status": "success", "seat_id": seat_id, "reservation_id": reservation.id}
@@ -109,9 +113,23 @@ def release_seat(seat_id: int, db: Session = Depends(get_db)):
     seat = db.query(Seat).filter(Seat.id == seat_id).first()
     if not seat:
         raise HTTPException(status_code=404, detail="Seat not found")
+    
+    # Update seat status
     seat.status = "available"
+    
+    # Deactivate all active reservations for this seat
+    active_reservations = db.query(SeatReservation).filter(
+        and_(
+            SeatReservation.seat_id == seat_id,
+            SeatReservation.status == "active"
+        )
+    ).all()
+    
+    for reservation in active_reservations:
+        reservation.status = "completed"
+    
     db.commit()
-    return {"status": "success"}
+    return {"status": "success", "message": "Seat released successfully"}
 
 @router.patch("/parkings/{parking_id}/slots")
 def update_slots(parking_id: int, slot_update: SlotUpdate, db: Session = Depends(get_db)):
