@@ -6,6 +6,7 @@ class ReservationCreate(BaseModel):
     parking_id: int
     check_in_time: Union[str, datetime]
     check_out_time: Union[str, datetime]
+    seat_number: Optional[str] = None
     
     @field_validator('check_in_time', 'check_out_time', mode='before')
     @classmethod
@@ -25,6 +26,7 @@ class Reservation(BaseModel):
     id: int
     user_id: int
     parking_id: int
+    seat_number: Optional[str]
     status: str
     check_in_time: datetime
     check_out_time: datetime

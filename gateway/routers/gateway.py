@@ -105,6 +105,21 @@ async def create_reservation(request: Request):
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
 
+@router.post("/reservations/quick-book/{parking_id}")
+async def quick_book(parking_id: int, request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"http://reservation-service:8003/reservations/quick-book/{parking_id}",
+            headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
 @router.get("/reservations")
 async def get_user_reservations(request: Request):
     auth_header = request.headers.get("authorization")
@@ -115,6 +130,16 @@ async def get_user_reservations(request: Request):
         response = await client.get(
             "http://reservation-service:8003/reservations",
             headers={"authorization": auth_header}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@router.get("/reservations/booked-seats/{parking_id}")
+async def get_booked_seats(parking_id: int):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"http://reservation-service:8003/reservations/booked-seats/{parking_id}"
         )
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)

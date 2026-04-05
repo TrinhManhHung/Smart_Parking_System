@@ -42,6 +42,8 @@ export const parkingAPI = {
 export const reservationAPI = {
   getUserReservations: () => api.get('/reservations'),
   createReservation: (reservationData) => api.post('/reservations', reservationData),
+  quickBook: (parkingId) => api.post(`/reservations/quick-book/${parkingId}`),
+  getBookedSeats: (parkingId) => api.get(`/reservations/booked-seats/${parkingId}`),
   checkIn: (reservationId) => api.post(`/reservations/${reservationId}/check-in`),
   checkOut: (reservationId) => api.post(`/reservations/${reservationId}/check-out`),
   cancelReservation: (reservationId) => api.delete(`/reservations/${reservationId}`),
@@ -67,7 +69,19 @@ export const userAPI = {
 }
 
 export const recommendationAPI = {
-  getRecommendations: (lat, lng) => api.get(`/recommendations?lat=${lat}&lng=${lng}`),
+  getRecommendations: (lat, lng, filters = {}) => {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString()
+    })
+    
+    if (filters.maxDistance) params.append('max_distance', filters.maxDistance)
+    if (filters.minAvailableSlots) params.append('min_available_slots', filters.minAvailableSlots)
+    if (filters.maxPrice) params.append('max_price', filters.maxPrice)
+    if (filters.sortBy) params.append('sort_by', filters.sortBy)
+    
+    return api.get(`/recommendations?${params.toString()}`)
+  },
 }
 
 export const paymentAPI = {

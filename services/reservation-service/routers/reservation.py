@@ -17,9 +17,18 @@ def health():
 def get_user_reservations(db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
     return reservation_service.get_user_reservations(user_id, db)
 
+@router.get("/reservations/booked-seats/{parking_id}")
+def get_booked_seats(parking_id: int, db: Session = Depends(get_db)):
+    """Get list of booked seat numbers for a parking lot"""
+    return reservation_service.get_booked_seats(parking_id, db)
+
 @router.post("/reservations", response_model=Reservation)
 async def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
     return await reservation_service.create_reservation(reservation, user_id, db)
+
+@router.post("/reservations/quick-book/{parking_id}", response_model=Reservation)
+async def quick_book(parking_id: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
+    return await reservation_service.quick_book(parking_id, user_id, db)
 
 @router.post("/reservations/{reservation_id}/check-in")
 def check_in(reservation_id: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):

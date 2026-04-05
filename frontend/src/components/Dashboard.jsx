@@ -30,26 +30,13 @@ function Dashboard() {
 
   const handleReserve = async (parkingId) => {
     try {
-      // Quick book: auto-set time to now + 2 hours
-      const now = new Date()
-      const checkInTime = new Date(now.getTime() + 5 * 60000) // 5 minutes from now
-      const checkOutTime = new Date(checkInTime.getTime() + 2 * 60 * 60000) // 2 hours later
-      
-      const reservationData = { 
-        parking_id: parkingId,
-        check_in_time: checkInTime.toISOString(),
-        check_out_time: checkOutTime.toISOString()
-      }
-      
-      console.log('Quick book data:', reservationData)
-      
-      const response = await reservationAPI.createReservation(reservationData)
+      const response = await reservationAPI.quickBook(parkingId)
       console.log('Quick book response:', response)
-      alert('Quick booking successful! Reserved for 2 hours.')
+      const seatNumber = response.data?.seat_number || response.seat_number || 'N/A'
+      alert(`Quick booking successful!\nSeat: ${seatNumber}\nReserved for 2 hours.`)
       fetchParkings()
     } catch (error) {
       console.error('Quick book error:', error)
-      console.error('Error response:', error.response?.data)
       alert(`Failed to create reservation: ${error.response?.data?.detail || error.message}`)
     }
   }

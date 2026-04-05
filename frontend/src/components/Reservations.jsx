@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { reservationAPI, paymentAPI, parkingAPI } from '../api/api'
+import { reservationAPI, paymentAPI, parkingAPI, userAPI } from '../api/api'
 
 function Reservations() {
   const [reservations, setReservations] = useState([])
@@ -10,9 +10,14 @@ function Reservations() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentMethods, setPaymentMethods] = useState([])
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
+  const [checkoutReservation, setCheckoutReservation] = useState(null)
 
   useEffect(() => {
     fetchReservations()
+    fetchPaymentMethods()
     // Auto refresh every 10 seconds
     const interval = setInterval(fetchReservations, 10000)
     return () => clearInterval(interval)
@@ -51,6 +56,23 @@ function Reservations() {
     }
   }
 
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await userAPI.getPaymentMethods()
+      console.log('Payment methods fetched:', response.data)
+      setPaymentMethods(response.data)
+      // Set default payment method if available
+      const defaultMethod = response.data.find(pm => pm.is_default)
+      if (defaultMethod) {
+        setSelectedPaymentMethod(defaultMethod.id)
+      } else if (response.data.length > 0) {
+        setSelectedPaymentMethod(response.data[0].id)
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error)
+    }
+  }
+
   const calculatePayment = async (reservation) => {
     try {
       const response = await paymentAPI.calculatePayment({
@@ -81,14 +103,51 @@ function Reservations() {
   }
 
   const handleCheckOut = async (reservationId) => {
+    console.log('handleCheckOut called with reservationId:', reservationId)
+    console.log('Payment methods available:', paymentMethods)
+    
+    // Open payment method selection modal
+    const reservation = reservations.find(r => r.id === reservationId)
+    setCheckoutReservation(reservation)
+    
+    if (paymentMethods.length === 0) {
+      setError('Please add a payment method in your profile first')
+      return
+    }
+    
+    // Calculate payment for checkout reservation
+    try {
+      const response = await paymentAPI.calculatePayment({
+        parking_id: reservation.parking_id,
+        check_in_time: reservation.check_in_time,
+        check_out_time: reservation.check_out_time
+      })
+      console.log('Payment info calculated:', response.data)
+      setPaymentInfo(response.data)
+    } catch (error) {
+      console.error('Failed to calculate payment:', error)
+    }
+    
+    console.log('Opening payment modal')
+    setShowPaymentModal(true)
+  }
+
+  const confirmCheckOut = async () => {
+    if (!selectedPaymentMethod) {
+      setError('Please select a payment method')
+      return
+    }
+
     setActionLoading(true)
     setError('')
     setSuccess('')
     try {
-      await reservationAPI.checkOut(reservationId)
-      setSuccess('Checked out successfully!')
+      await reservationAPI.checkOut(checkoutReservation.id)
+      setSuccess(`Checked out successfully! Payment processed via ${paymentMethods.find(pm => pm.id === selectedPaymentMethod)?.card_type || 'selected method'}`)
       await fetchReservations()
       setSelectedReservation(null)
+      setShowPaymentModal(false)
+      setCheckoutReservation(null)
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to check out')
     } finally {
@@ -127,6 +186,19 @@ function Reservations() {
         {config.icon} {config.label}
       </span>
     )
+  }
+
+  const getPaymentMethodIcon = (cardType) => {
+    const icons = {
+      'Visa': '💳',
+      'Mastercard': '💳',
+      'American Express': '💳',
+      'Discover': '💳',
+      'PayPal': '💰',
+      'Apple Pay': '🍎',
+      'Google Pay': '🔵'
+    }
+    return icons[cardType] || '💳'
   }
 
   const formatDateTime = (dateString) => {
@@ -205,6 +277,11 @@ function Reservations() {
 
                     <div className="reservation-details">
                       <h3>{parking?.name || `Parking #${reservation.parking_id}`}</h3>
+                      {reservation.seat_number && (
+                        <p className="seat-number">
+                          <span className="seat-icon">🅿️</span> Seat: <strong>{reservation.seat_number}</strong>
+                        </p>
+                      )}
                       {parking && (
                         <p className="parking-address">
                           <span className="icon">📍</span>
@@ -308,6 +385,14 @@ function Reservations() {
                     {parkingDetails[selectedReservation.parking_id]?.name || `Parking #${selectedReservation.parking_id}`}
                   </span>
                 </div>
+                {selectedReservation.seat_number && (
+                  <div className="detail-row">
+                    <span className="label">Seat Number:</span>
+                    <span className="value seat-highlight">
+                      🅿️ {selectedReservation.seat_number}
+                    </span>
+                  </div>
+                )}
                 <div className="detail-row">
                   <span className="label">Address:</span>
                   <span className="value">
@@ -395,6 +480,100 @@ function Reservations() {
           )}
         </div>
       </div>
+
+      {/* Payment Method Selection Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>💳 Select Payment Method</h2>
+              <button 
+                className="modal-close"
+                onClick={() => setShowPaymentModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {paymentInfo && (
+                <div className="checkout-summary">
+                  <h3>Payment Summary</h3>
+                  <div className="summary-row">
+                    <span>Duration:</span>
+                    <span>{paymentInfo.duration_minutes} minutes</span>
+                  </div>
+                  <div className="summary-row">
+                    <span>Rate:</span>
+                    <span>${paymentInfo.rate_per_hour}/hour</span>
+                  </div>
+                  <div className="summary-row total">
+                    <span>Total Amount:</span>
+                    <span>${paymentInfo.total_cost}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="payment-methods-list">
+                <h3>Choose Payment Method</h3>
+                {paymentMethods.length === 0 ? (
+                  <div className="no-payment-methods">
+                    <p>No payment methods available</p>
+                    <p className="hint">Please add a payment method in your profile</p>
+                  </div>
+                ) : (
+                  paymentMethods.map((method) => (
+                    <div
+                      key={method.id}
+                      className={`payment-method-item ${selectedPaymentMethod === method.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedPaymentMethod(method.id)}
+                    >
+                      <div className="payment-method-radio">
+                        <input
+                          type="radio"
+                          name="payment-method"
+                          checked={selectedPaymentMethod === method.id}
+                          onChange={() => setSelectedPaymentMethod(method.id)}
+                        />
+                      </div>
+                      <div className="payment-method-info">
+                        <div className="payment-method-header">
+                          <span className="payment-icon">{getPaymentMethodIcon(method.card_type)}</span>
+                          <span className="payment-type">{method.card_type}</span>
+                          {method.is_default && (
+                            <span className="default-badge">Default</span>
+                          )}
+                        </div>
+                        <div className="payment-method-details">
+                          <span>•••• •••• •••• {method.last_four_digits}</span>
+                          <span className="expiry">Exp: {method.expiry_date}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={confirmCheckOut}
+                disabled={actionLoading || !selectedPaymentMethod}
+              >
+                {actionLoading ? 'Processing...' : `Pay $${paymentInfo?.total_cost || '0.00'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

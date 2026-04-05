@@ -15,6 +15,7 @@ class Reservation(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer)
     parking_id = Column(Integer)
+    seat_number = Column(String, nullable=True)  # e.g., "A-01", "B-15"
     status = Column(String, default="reserved")
     check_in_time = Column(DateTime)
     check_out_time = Column(DateTime)

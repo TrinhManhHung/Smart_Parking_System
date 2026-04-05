@@ -9,6 +9,7 @@ function SeatBooking() {
   const [seats, setSeats] = useState([])
   const [parking, setParking] = useState(null)
   const [selectedSeats, setSelectedSeats] = useState([])
+  const [bookedSeats, setBookedSeats] = useState([])
   const [duration, setDuration] = useState(1)
   const [startTime, setStartTime] = useState(new Date().toISOString().slice(0, 16))
   const [loading, setLoading] = useState(true)
@@ -22,6 +23,10 @@ function SeatBooking() {
     try {
       const parkingRes = await parkingAPI.getParkingById(parkingId)
       setParking(parkingRes.data)
+      
+      // Get booked seats
+      const bookedRes = await reservationAPI.getBookedSeats(parkingId)
+      setBookedSeats(bookedRes.data.booked_seats || [])
       
       // Tính toán thời gian kết thúc
       const checkInTime = new Date(startTime)
@@ -84,14 +89,22 @@ function SeatBooking() {
         )
       }
 
-      // Create reservation
+      // Get seat number from first selected seat
+      // Convert to format like Quick Book: A-01, B-02, etc.
+      const firstSeat = selectedSeats[0]
+      const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F']
+      const rowLetter = rowLetters[firstSeat.row - 1] || 'A'
+      const seatNumber = `${rowLetter}-${String(firstSeat.col).padStart(2, '0')}`
+
+      // Create reservation with seat number
       const reservationRes = await reservationAPI.createReservation({
         parking_id: parseInt(parkingId),
         check_in_time: checkInTime.toISOString(),
-        check_out_time: checkOutTime.toISOString()
+        check_out_time: checkOutTime.toISOString(),
+        seat_number: seatNumber
       })
 
-      alert(`Booking confirmed! Total: $${paymentRes.data.total_cost.toFixed(2)}`)
+      alert(`Booking confirmed!\nSeat: ${seatNumber}\nTotal: ${paymentRes.data.total_cost.toFixed(2)}`)
       navigate('/reservations')
     } catch (err) {
       console.error('Booking error:', err)
@@ -121,32 +134,40 @@ function SeatBooking() {
               <h3>🚗 Parking Layout</h3>
               <p>Select your preferred parking spots</p>
             </div>
-            {[...Array(5)].map((_, row) => (
-              <div key={row} className="seat-row">
-                <div className="row-label">Row {row + 1}</div>
-                {[...Array(8)].map((_, col) => {
-                  const seat = seats.find(s => s.row === row + 1 && s.col === col + 1)
-                  if (!seat) return <div key={col} className="empty-spot"></div>
-                  
-                  const isSelected = selectedSeats.some(s => s.id === seat.id)
-                  const seatClass = `seat ${seat.status} ${isSelected ? 'selected' : ''}`
-                  
-                  return (
-                    <button
-                      key={col}
-                      className={seatClass}
-                      onClick={() => toggleSeat(seat)}
-                      disabled={seat.status === 'booked'}
-                      title={`Row ${seat.row}, Col ${seat.col} - $${seat.price_per_hour}/hr`}
-                    >
-                      <div className="seat-number">{row + 1}-{col + 1}</div>
-                      <div className="seat-price">${seat.price_per_hour}/h</div>
-                    </button>
-                  )
-                })}
-                <div className="row-label">Row {row + 1}</div>
-              </div>
-            ))}
+            {[...Array(5)].map((_, row) => {
+              const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F']
+              const rowLetter = rowLetters[row] || 'A'
+              
+              return (
+                <div key={row} className="seat-row">
+                  <div className="row-label">Row {rowLetter}</div>
+                  {[...Array(8)].map((_, col) => {
+                    // Format: A-01, B-02, etc.
+                    const seatNumber = `${rowLetter}-${String(col + 1).padStart(2, '0')}`
+                    const isBooked = bookedSeats.includes(seatNumber)
+                    const seat = seats.find(s => s.row === row + 1 && s.col === col + 1)
+                    if (!seat) return <div key={col} className="empty-spot"></div>
+                    
+                    const isSelected = selectedSeats.some(s => s.id === seat.id)
+                    const seatClass = `seat ${isBooked ? 'booked' : seat.status} ${isSelected ? 'selected' : ''}`
+                    
+                    return (
+                      <button
+                        key={col}
+                        className={seatClass}
+                        onClick={() => toggleSeat(seat)}
+                        disabled={isBooked || seat.status === 'booked'}
+                        title={`${seatNumber} - ${isBooked ? 'Booked' : seat.price_per_hour + '/hr'}`}
+                      >
+                        <div className="seat-number">{seatNumber}</div>
+                        <div className="seat-price">${seat.price_per_hour}/h</div>
+                      </button>
+                    )
+                  })}
+                  <div className="row-label">Row {rowLetter}</div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -194,20 +215,26 @@ function SeatBooking() {
                   <span className="hint">👆 Click on available spots above</span>
                 </li>
               ) : (
-                selectedSeats.map(seat => (
-                  <li key={seat.id}>
-                    <div className="seat-info">
-                      <span>Row {seat.row}, Col {seat.col} - ${(seat.price_per_hour * duration).toFixed(2)}</span>
-                      <button 
-                        className="remove-seat-btn"
-                        onClick={() => toggleSeat(seat)}
-                        title="Remove this spot"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </li>
-                ))
+                selectedSeats.map(seat => {
+                  const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F']
+                  const rowLetter = rowLetters[seat.row - 1] || 'A'
+                  const seatNumber = `${rowLetter}-${String(seat.col).padStart(2, '0')}`
+                  
+                  return (
+                    <li key={seat.id}>
+                      <div className="seat-info">
+                        <span>{seatNumber} - ${(seat.price_per_hour * duration).toFixed(2)}</span>
+                        <button 
+                          className="remove-seat-btn"
+                          onClick={() => toggleSeat(seat)}
+                          title="Remove this spot"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })
               )}
             </ul>
           </div>
