@@ -1,38 +1,129 @@
 .dashboard {
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 20px;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dashboard h1 {
-  text-align: center;
   color: white;
-  font-size: 2.5rem;
-  margin-bottom: 40px;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 18px;
+  margin-bottom: 32px;
+}
+
+.search-bar {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 50px;
+  font-size: 16px;
+  background: white;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .parking-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 25px;
-  max-width: 1200px;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  max-width: 1400px;
   margin: 0 auto;
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .parking-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: white;
   border-radius: 20px;
-  padding: 25px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 28px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  animation: fadeInCard 0.5s ease-out;
+}
+
+@keyframes fadeInCard {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .parking-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+  transform: translateY(-8px);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
 }
 
 .parking-header {
@@ -40,156 +131,137 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
 }
 
 .parking-header h3 {
+  color: #1a202c;
+  font-size: 24px;
+  font-weight: 700;
   margin: 0;
-  color: #333;
-  font-size: 1.4rem;
-  font-weight: 600;
+  flex: 1;
 }
 
 .availability-badge {
-  padding: 6px 12px;
+  margin-left: 12px;
+}
+
+.availability-badge span {
+  padding: 8px 16px;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .availability-badge .available {
-  background: linear-gradient(145deg, #4caf50, #66bb6a);
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
   color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
 }
 
 .availability-badge .full {
-  background: linear-gradient(145deg, #f44336, #ef5350);
+  background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
   color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(245, 101, 101, 0.3);
 }
 
 .parking-info {
-  margin-bottom: 25px;
+  margin-bottom: 24px;
 }
 
 .parking-info p {
-  margin: 12px 0;
-  color: #555;
-  font-size: 1rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+  margin: 12px 0;
+  color: #4a5568;
+  font-size: 15px;
 }
 
 .parking-info .icon {
-  font-size: 1.1rem;
-  width: 20px;
+  font-size: 20px;
+  margin-right: 12px;
+  width: 24px;
+  text-align: center;
 }
 
 .button-group {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.btn {
+.button-group .btn {
+  flex: 1;
   padding: 12px 20px;
-  border: none;
-  border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
+  margin: 0;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  flex: 1;
-  min-width: 120px;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s;
-}
-
-.btn:hover:not(:disabled)::before {
-  left: 100%;
+  transition: all 0.3s ease;
 }
 
 .btn-primary {
-  background: linear-gradient(145deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
   color: white;
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(145deg, #5a67d8, #6b46c1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
 }
 
 .btn-secondary {
-  background: linear-gradient(145deg, #e2e8f0, #cbd5e0);
-  color: #4a5568;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  box-shadow: 0 4px 15px rgba(66, 153, 225, 0.4);
+  color: white;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: linear-gradient(145deg, #cbd5e0, #a0aec0);
+  box-shadow: 0 6px 20px rgba(66, 153, 225, 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .btn:disabled {
-  background: linear-gradient(145deg, #f7fafc, #edf2f7);
+  background: #e2e8f0;
   color: #a0aec0;
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
+  opacity: 0.6;
 }
 
-.btn:disabled::before {
-  display: none;
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: white;
+  font-size: 18px;
 }
 
 @media (max-width: 768px) {
-  .dashboard {
-    padding: 15px;
-  }
-  
-  .dashboard h1 {
-    font-size: 2rem;
-    margin-bottom: 30px;
-  }
-  
   .parking-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 16px;
   }
-  
-  .parking-card {
-    padding: 20px;
+
+  .dashboard h1 {
+    font-size: 32px;
   }
-  
+
   .parking-header {
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
   }
-  
+
+  .availability-badge {
+    margin-left: 0;
+    margin-top: 12px;
+  }
+
   .button-group {
     flex-direction: column;
-  }
-  
-  .btn {
-    min-width: auto;
   }
 }
