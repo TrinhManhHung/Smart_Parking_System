@@ -16,6 +16,12 @@ class ReservationService:
             if response.status_code != 200:
                 raise HTTPException(status_code=400, detail="Failed to update parking slots")
     
+    def get_user_reservations(self, user_id: int, db: Session):
+        reservations = db.query(Reservation).filter(
+            Reservation.user_id == user_id
+        ).order_by(Reservation.created_at.desc()).all()
+        return reservations
+    
     async def create_reservation(self, reservation: ReservationCreate, user_id: int, db: Session):
         db_reservation = Reservation(
             user_id=user_id, 

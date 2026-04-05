@@ -13,6 +13,10 @@ reservation_service = ReservationService()
 def health():
     return {"status": "ok"}
 
+@router.get("/reservations", response_model=List[Reservation])
+def get_user_reservations(db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
+    return reservation_service.get_user_reservations(user_id, db)
+
 @router.post("/reservations", response_model=Reservation)
 async def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
     return await reservation_service.create_reservation(reservation, user_id, db)

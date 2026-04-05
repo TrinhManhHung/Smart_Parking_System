@@ -40,6 +40,7 @@ export const parkingAPI = {
 }
 
 export const reservationAPI = {
+  getUserReservations: () => api.get('/reservations'),
   createReservation: (reservationData) => api.post('/reservations', reservationData),
   checkIn: (reservationId) => api.post(`/reservations/${reservationId}/check-in`),
   checkOut: (reservationId) => api.post(`/reservations/${reservationId}/check-out`),
