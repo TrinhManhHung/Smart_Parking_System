@@ -5,12 +5,7 @@ function Reservations() {
   const [reservations, setReservations] = useState([])
   const [parkingDetails, setParkingDetails] = useState({})
   const [selectedReservation, setSelectedReservation] = useState(null)
-  const [paymentData, setPaymentData] = useState({
-    parking_id: '',
-    check_in_time: '',
-    check_out_time: ''
-  })
-  const [paymentResult, setPaymentResult] = useState(null)
+  const [paymentInfo, setPaymentInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
@@ -22,6 +17,14 @@ function Reservations() {
     const interval = setInterval(fetchReservations, 10000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (selectedReservation) {
+      calculatePayment(selectedReservation)
+    } else {
+      setPaymentInfo(null)
+    }
+  }, [selectedReservation])
 
   const fetchReservations = async () => {
     try {
@@ -45,6 +48,19 @@ function Reservations() {
       setError('Failed to load reservations')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const calculatePayment = async (reservation) => {
+    try {
+      const response = await paymentAPI.calculatePayment({
+        parking_id: reservation.parking_id,
+        check_in_time: reservation.check_in_time,
+        check_out_time: reservation.check_out_time
+      })
+      setPaymentInfo(response.data)
+    } catch (error) {
+      console.error('Failed to calculate payment:', error)
     }
   }
 
@@ -99,26 +115,6 @@ function Reservations() {
     }
   }
 
-  const handlePaymentCalculation = async (e) => {
-    e.preventDefault()
-    setActionLoading(true)
-    setError('')
-    setPaymentResult(null)
-    try {
-      const response = await paymentAPI.calculatePayment({
-        ...paymentData,
-        parking_id: parseInt(paymentData.parking_id),
-        check_in_time: new Date(paymentData.check_in_time).toISOString(),
-        check_out_time: new Date(paymentData.check_out_time).toISOString()
-      })
-      setPaymentResult(response.data)
-    } catch (error) {
-      setError('Failed to calculate payment. Please check your input.')
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
   const getStatusBadge = (status) => {
     const statusConfig = {
       reserved: { label: 'Reserved', class: 'status-reserved', icon: '📅' },
@@ -142,6 +138,19 @@ function Reservations() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const calculateDuration = (startTime, endTime) => {
+    const start = new Date(startTime)
+    const end = new Date(endTime)
+    const diffMs = end - start
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    
+    if (diffHours > 0) {
+      return `${diffHours}h ${diffMinutes}m`
+    }
+    return `${diffMinutes}m`
   }
 
   if (loading) {
@@ -216,6 +225,12 @@ function Reservations() {
                             <strong>Check-out:</strong> {formatDateTime(reservation.check_out_time)}
                           </div>
                         </div>
+                        <div className="time-row">
+                          <span className="icon">⏱️</span>
+                          <div>
+                            <strong>Duration:</strong> {calculateDuration(reservation.check_in_time, reservation.check_out_time)}
+                          </div>
+                        </div>
                       </div>
 
                       {reservation.checked_in_at && (
@@ -279,68 +294,105 @@ function Reservations() {
           )}
         </div>
 
-        {/* Payment Calculator */}
-        <div className="payment-calculator-section">
-          <div className="reservation-card">
-            <h2>💰 Calculate Payment</h2>
-            <form onSubmit={handlePaymentCalculation}>
-              <div className="form-group">
-                <label>Parking ID</label>
-                <input
-                  type="number"
-                  value={paymentData.parking_id}
-                  onChange={(e) => setPaymentData({...paymentData, parking_id: e.target.value})}
-                  placeholder="Enter parking ID"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Check-in Time</label>
-                <input
-                  type="datetime-local"
-                  value={paymentData.check_in_time}
-                  onChange={(e) => setPaymentData({...paymentData, check_in_time: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Check-out Time</label>
-                <input
-                  type="datetime-local"
-                  value={paymentData.check_out_time}
-                  onChange={(e) => setPaymentData({...paymentData, check_out_time: e.target.value})}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn" disabled={actionLoading}>
-                {actionLoading ? 'Calculating...' : '💳 Calculate Payment'}
-              </button>
-            </form>
-
-            {paymentResult && (
-              <div className="payment-result">
-                <h3>Payment Details</h3>
-                <div className="payment-info">
-                  <div className="payment-row">
-                    <span>Parking:</span>
-                    <span>{paymentResult.parking_name}</span>
-                  </div>
-                  <div className="payment-row">
-                    <span>Duration:</span>
-                    <span>{paymentResult.duration_minutes} minutes</span>
-                  </div>
-                  <div className="payment-row">
-                    <span>Rate:</span>
-                    <span>${paymentResult.rate_per_hour}/hour</span>
-                  </div>
-                  <div className="payment-row total">
-                    <span>Total Cost:</span>
-                    <span>${paymentResult.total_cost}</span>
-                  </div>
+        {/* Reservation Details & Payment */}
+        <div className="reservation-details-section">
+          {selectedReservation ? (
+            <div className="reservation-card">
+              <h2>💳 Reservation Details</h2>
+              
+              <div className="detail-section">
+                <h3>Parking Information</h3>
+                <div className="detail-row">
+                  <span className="label">Parking:</span>
+                  <span className="value">
+                    {parkingDetails[selectedReservation.parking_id]?.name || `Parking #${selectedReservation.parking_id}`}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Address:</span>
+                  <span className="value">
+                    {parkingDetails[selectedReservation.parking_id]?.address || 'N/A'}
+                  </span>
                 </div>
               </div>
-            )}
-          </div>
+
+              <div className="detail-section">
+                <h3>Time Schedule</h3>
+                <div className="detail-row">
+                  <span className="label">Check-in:</span>
+                  <span className="value">{formatDateTime(selectedReservation.check_in_time)}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Check-out:</span>
+                  <span className="value">{formatDateTime(selectedReservation.check_out_time)}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Duration:</span>
+                  <span className="value">
+                    {calculateDuration(selectedReservation.check_in_time, selectedReservation.check_out_time)}
+                  </span>
+                </div>
+              </div>
+
+              {paymentInfo && (
+                <div className="payment-result">
+                  <h3>💰 Payment Information</h3>
+                  <div className="payment-info">
+                    <div className="payment-row">
+                      <span>Rate:</span>
+                      <span>${paymentInfo.rate_per_hour}/hour</span>
+                    </div>
+                    <div className="payment-row">
+                      <span>Duration:</span>
+                      <span>{paymentInfo.duration_minutes} minutes</span>
+                    </div>
+                    <div className="payment-row total">
+                      <span>Estimated Total:</span>
+                      <span>${paymentInfo.total_cost}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="detail-actions">
+                {selectedReservation.status === 'reserved' && (
+                  <>
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => handleCheckIn(selectedReservation.id)}
+                      disabled={actionLoading}
+                    >
+                      ✓ Check In Now
+                    </button>
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => handleCancel(selectedReservation.id)}
+                      disabled={actionLoading}
+                    >
+                      ✕ Cancel Reservation
+                    </button>
+                  </>
+                )}
+                {selectedReservation.status === 'checked_in' && (
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => handleCheckOut(selectedReservation.id)}
+                    disabled={actionLoading}
+                  >
+                    ✓ Check Out & Pay
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="reservation-card empty-state">
+              <div className="empty-state-content">
+                <span className="empty-icon">👈</span>
+                <h3>Select a Reservation</h3>
+                <p>Click on a reservation from the list to view details and payment information</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
