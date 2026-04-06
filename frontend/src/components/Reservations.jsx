@@ -200,10 +200,6 @@ function Reservations() {
                     onClick={() => !isCompleted && setSelectedReservation(reservation)}
                   >
                     <div className="reservation-header">
-                      <div className="reservation-id">
-                        <span className="label">ID:</span>
-                        <span className="value">#{reservation.id}</span>
-                      </div>
                       {getStatusBadge(reservation.status)}
                     </div>
 

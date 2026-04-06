@@ -57,52 +57,57 @@ function Dashboard() {
     }
 
     try {
-      // Create quick book reservation
-      const response = await reservationAPI.quickBook(parkingId)
-      const reservation = response.data
+      // Prepare quick book (no reservation created yet)
+      const response = await reservationAPI.quickBookPrepare(parkingId)
+      const bookingInfo = response.data
       
       // Calculate payment
       const paymentRes = await paymentAPI.calculatePayment({
         parking_id: parkingId,
-        check_in_time: reservation.check_in_time,
-        check_out_time: reservation.check_out_time
+        check_in_time: bookingInfo.check_in_time,
+        check_out_time: bookingInfo.check_out_time
       })
 
       // Store data for payment modal
       setQuickBookData({
-        reservation: reservation,
+        bookingInfo: bookingInfo,
         payment: paymentRes.data,
         parkingId: parkingId
       })
       
       setShowPaymentModal(true)
     } catch (error) {
-      console.error('Quick book error:', error)
-      alert(`Failed to create reservation: ${error.response?.data?.detail || error.message}`)
+      console.error('Quick book prepare error:', error)
+      alert(`Failed to prepare reservation: ${error.response?.data?.detail || error.message}`)
     }
   }
 
   const confirmQuickBookPayment = async () => {
-    if (!selectedPaymentMethod) {
-      alert('Please select a payment method')
-      return
-    }
+      if (!selectedPaymentMethod) {
+        alert('Please select a payment method')
+        return
+      }
 
-    setBookingLoading(true)
-    
-    try {
-      const paymentMethod = paymentMethods.find(pm => pm.id === selectedPaymentMethod)
-      
-      alert(`✅ Quick Booking & Payment Successful!\n\nSeat: ${quickBookData.reservation.seat_number}\nAmount Paid: $${quickBookData.payment.total_cost}\nPayment Method: ${paymentMethod?.card_type} •••• ${paymentMethod?.last_four_digits}\n\nReserved for 2 hours`)
-      
-      setShowPaymentModal(false)
-      fetchParkings()
-    } catch (error) {
-      alert('Payment failed: ' + error.message)
-    } finally {
-      setBookingLoading(false)
+      setBookingLoading(true)
+
+      try {
+        // Confirm the booking - this creates the actual reservation
+        const reservationResponse = await reservationAPI.quickBookConfirm(quickBookData.bookingInfo)
+        const reservation = reservationResponse.data
+
+        const paymentMethod = paymentMethods.find(pm => pm.id === selectedPaymentMethod)
+
+        alert(`✅ Quick Booking & Payment Successful!\n\nSeat: ${reservation.seat_number}\nAmount Paid: $${quickBookData.payment.total_cost}\nPayment Method: ${paymentMethod?.card_type} •••• ${paymentMethod?.last_four_digits}\n\nReserved for 2 hours`)
+
+        setShowPaymentModal(false)
+        fetchParkings()
+      } catch (error) {
+        console.error('Payment confirmation error:', error)
+        alert(`Payment failed: ${error.response?.data?.detail || error.message}`)
+      } finally {
+        setBookingLoading(false)
+      }
     }
-  }
 
   const getPaymentMethodIcon = (cardType) => {
     const icons = {
@@ -235,7 +240,7 @@ function Dashboard() {
                 <h3>Quick Booking Summary</h3>
                 <div className="summary-row">
                   <span>Seat:</span>
-                  <span><strong>{quickBookData.reservation.seat_number}</strong></span>
+                  <span><strong>{quickBookData.bookingInfo.seat_number}</strong></span>
                 </div>
                 <div className="summary-row">
                   <span>Duration:</span>

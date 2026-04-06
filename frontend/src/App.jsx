@@ -61,6 +61,13 @@ function App() {
         }
       } catch (error) {
         console.error('Error checking setup status:', error)
+        // If token is invalid, redirect to login
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('setupComplete')
+          window.location.href = '/login'
+          return
+        }
         setSetupComplete(false)
       } finally {
         setLoading(false)

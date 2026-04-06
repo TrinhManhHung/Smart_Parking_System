@@ -1,0 +1,414 @@
+# ============================================
+# Parking Service — OpenAPI 3.0 Specification
+# ============================================
+openapi: 3.0.3
+info:
+  title: Parking Service API
+  description: |
+    Parking Management Service for Smart Parking System.
+    
+    This service handles:
+    - Parking location management
+    - Parking seat/slot management
+    - Seat booking and release operations
+    - Real-time availability checking
+    
+    Most endpoints are public except for administrative operations.
+  version: 1.0.0
+  contact:
+    name: Smart Parking Team
+
+servers:
+  - url: http://localhost:8002
+    description: Local development
+  - url: http://localhost:8000
+    description: API Gateway
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Parkings
+    description: Parking location management
+  - name: Seats
+    description: Parking seat management and booking
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /parkings:
+    get:
+      tags:
+        - Parkings
+      summary: Get all parking locations
+      operationId: getParkings
+      responses:
+        '200':
+          description: List of all parking locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Parking'
+    
+    post:
+      tags:
+        - Parkings
+      summary: Create a new parking location
+      operationId: createParking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParkingCreate'
+      responses:
+        '200':
+          description: Parking location created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parking'
+        '400':
+          description: Invalid parking data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /parkings/{parking_id}:
+    get:
+      tags:
+        - Parkings
+      summary: Get parking location by ID
+      operationId: getParking
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Parking location ID
+      responses:
+        '200':
+          description: Parking location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parking'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /parkings/{parking_id}/seats:
+    get:
+      tags:
+        - Seats
+      summary: Get all seats for a parking location
+      operationId: getParkingSeats
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Parking location ID
+        - name: start_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Start time for availability check (ISO 8601 format)
+          example: "2024-01-01T10:00:00Z"
+        - name: end_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: End time for availability check (ISO 8601 format)
+          example: "2024-01-01T12:00:00Z"
+      responses:
+        '200':
+          description: List of seats with availability status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seat'
+        '400':
+          description: Invalid datetime format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /parkings/{parking_id}/slots:
+    patch:
+      tags:
+        - Parkings
+      summary: Update available slots count
+      operationId: updateSlots
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Parking location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotUpdate'
+      responses:
+        '200':
+          description: Slots updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parking'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /seats/{seat_id}/book:
+    post:
+      tags:
+        - Seats
+      summary: Book a parking seat
+      operationId: bookSeat
+      parameters:
+        - name: seat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Seat ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeatBookingRequest'
+      responses:
+        '200':
+          description: Seat booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '400':
+          description: Seat already booked or invalid time format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /seats/{seat_id}/release:
+    post:
+      tags:
+        - Seats
+      summary: Release a parking seat
+      operationId: releaseSeat
+      parameters:
+        - name: seat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Seat ID
+      responses:
+        '200':
+          description: Seat released successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Seat released successfully
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  schemas:
+    Parking:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Bãi đỗ xe Tràng Tiền Plaza"
+        address:
+          type: string
+          example: "24 Hai Bà Trưng, Hoàn Kiếm, Hà Nội"
+        latitude:
+          type: number
+          format: float
+          example: 21.0245
+        longitude:
+          type: number
+          format: float
+          example: 105.8572
+        total_slots:
+          type: integer
+          example: 200
+        available_slots:
+          type: integer
+          example: 45
+        rate_per_hour:
+          type: number
+          format: float
+          example: 20000
+
+    ParkingCreate:
+      type: object
+      required:
+        - name
+        - address
+        - latitude
+        - longitude
+        - total_slots
+        - rate_per_hour
+      properties:
+        name:
+          type: string
+          example: "Bãi đỗ xe Tràng Tiền Plaza"
+        address:
+          type: string
+          example: "24 Hai Bà Trưng, Hoàn Kiếm, Hà Nội"
+        latitude:
+          type: number
+          format: float
+          example: 21.0245
+        longitude:
+          type: number
+          format: float
+          example: 105.8572
+        total_slots:
+          type: integer
+          minimum: 1
+          example: 200
+        available_slots:
+          type: integer
+          minimum: 0
+          example: 200
+        rate_per_hour:
+          type: number
+          format: float
+          minimum: 0
+          example: 20000
+
+    Seat:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        parking_id:
+          type: integer
+          example: 1
+        row:
+          type: integer
+          example: 1
+        col:
+          type: integer
+          example: 5
+        seat_type:
+          type: string
+          example: "standard"
+        status:
+          type: string
+          enum: [available, booked]
+          example: "available"
+        price_per_hour:
+          type: number
+          format: float
+          example: 20000
+
+    SeatBookingRequest:
+      type: object
+      required:
+        - user_id
+        - start_time
+        - end_time
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        start_time:
+          type: string
+          format: date-time
+          example: "2024-01-01T10:00:00Z"
+        end_time:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:00:00Z"
+
+    BookingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        seat_id:
+          type: integer
+          example: 1
+        reservation_id:
+          type: integer
+          example: 123
+
+    SlotUpdate:
+      type: object
+      required:
+        - change
+      properties:
+        change:
+          type: integer
+          description: Number to add/subtract from available slots (can be negative)
+          example: -1
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: Error message
+
+  responses:
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: Resource not found

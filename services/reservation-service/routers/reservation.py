@@ -26,9 +26,15 @@ def get_booked_seats(parking_id: int, db: Session = Depends(get_db)):
 async def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
     return await reservation_service.create_reservation(reservation, user_id, db)
 
-@router.post("/reservations/quick-book/{parking_id}", response_model=Reservation)
-async def quick_book(parking_id: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
-    return await reservation_service.quick_book(parking_id, user_id, db)
+@router.post("/reservations/quick-book-prepare/{parking_id}")
+async def quick_book_prepare(parking_id: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
+    """Prepare quick book - calculate seat and payment without creating reservation"""
+    return await reservation_service.quick_book_prepare(parking_id, user_id, db)
+
+@router.post("/reservations/quick-book-confirm", response_model=Reservation)
+async def quick_book_confirm(booking_data: dict, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
+    """Confirm quick book - create actual reservation after payment"""
+    return await reservation_service.quick_book_confirm(booking_data, user_id, db)
 
 @router.post("/reservations/{reservation_id}/check-in")
 def check_in(reservation_id: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):

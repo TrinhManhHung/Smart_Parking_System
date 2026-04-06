@@ -1,0 +1,586 @@
+# ============================================
+# Reservation Service — OpenAPI 3.0 Specification
+# ============================================
+openapi: 3.0.3
+info:
+  title: Reservation Service API
+  description: |
+    Reservation Management Service for Smart Parking System.
+    
+    This service handles:
+    - Parking reservations management
+    - Quick booking functionality
+    - Check-in and check-out operations
+    - User statistics and history
+    - Booked seats tracking
+    
+    All endpoints require Bearer token authentication.
+  version: 1.0.0
+  contact:
+    name: Smart Parking Team
+
+servers:
+  - url: http://localhost:8003
+    description: Local development
+  - url: http://localhost:8000
+    description: API Gateway
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Reservations
+    description: Reservation management
+  - name: Quick Booking
+    description: Quick booking functionality
+  - name: Statistics
+    description: User statistics and history
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Get user reservations
+      operationId: getUserReservations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Reservations
+      summary: Create a new reservation
+      operationId: createReservation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+      responses:
+        '200':
+          description: Reservation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid reservation data or seat unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /reservations/booked-seats/{parking_id}:
+    get:
+      tags:
+        - Reservations
+      summary: Get booked seats for a parking location
+      operationId: getBookedSeats
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Parking location ID
+      responses:
+        '200':
+          description: List of booked seat numbers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                example: [1, 5, 12, 25]
+
+  /reservations/quick-book-prepare/{parking_id}:
+    post:
+      tags:
+        - Quick Booking
+      summary: Prepare quick booking
+      description: Calculate seat assignment and payment without creating reservation
+      operationId: quickBookPrepare
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Parking location ID
+      responses:
+        '200':
+          description: Quick booking preparation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickBookPrepareResponse'
+        '400':
+          description: No available seats or invalid parking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /reservations/quick-book-confirm:
+    post:
+      tags:
+        - Quick Booking
+      summary: Confirm quick booking
+      description: Create actual reservation after payment confirmation
+      operationId: quickBookConfirm
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuickBookConfirmRequest'
+      responses:
+        '200':
+          description: Quick booking confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Invalid booking data or seat no longer available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /reservations/{reservation_id}/check-in:
+    post:
+      tags:
+        - Reservations
+      summary: Check in to a reservation
+      operationId: checkIn
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Reservation ID
+      responses:
+        '200':
+          description: Check-in successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Checked in successfully
+                  check_in_time:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T10:00:00Z"
+        '400':
+          description: Invalid check-in (already checked in, expired, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /reservations/{reservation_id}/check-out:
+    post:
+      tags:
+        - Reservations
+      summary: Check out from a reservation
+      operationId: checkOut
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Reservation ID
+      responses:
+        '200':
+          description: Check-out successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Checked out successfully
+                  check_out_time:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T12:00:00Z"
+                  total_cost:
+                    type: number
+                    format: float
+                    example: 40000
+                  duration_hours:
+                    type: number
+                    format: float
+                    example: 2.0
+        '400':
+          description: Invalid check-out (not checked in, already completed, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /reservations/{reservation_id}:
+    delete:
+      tags:
+        - Reservations
+      summary: Cancel a reservation
+      operationId: cancelReservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Reservation ID
+      responses:
+        '200':
+          description: Reservation cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reservation cancelled successfully
+        '400':
+          description: Cannot cancel reservation (already checked in, completed, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /statistics:
+    get:
+      tags:
+        - Statistics
+      summary: Get user statistics
+      operationId: getUserStatistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User parking statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatistics'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /history:
+    get:
+      tags:
+        - Statistics
+      summary: Get reservation history
+      operationId: getReservationHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+          description: Maximum number of reservations to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of reservations to skip
+      responses:
+        '200':
+          description: Reservation history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from auth service
+
+  schemas:
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        parking_id:
+          type: integer
+          example: 1
+        seat_id:
+          type: integer
+          nullable: true
+          example: 25
+        vehicle_id:
+          type: integer
+          nullable: true
+          example: 1
+        start_time:
+          type: string
+          format: date-time
+          example: "2024-01-01T10:00:00Z"
+        end_time:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:00:00Z"
+        check_in_time:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-01T10:05:00Z"
+        check_out_time:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-01T11:55:00Z"
+        status:
+          type: string
+          enum: [reserved, checked_in, completed, cancelled]
+          example: "reserved"
+        total_cost:
+          type: number
+          format: float
+          nullable: true
+          example: 40000
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T09:30:00Z"
+
+    ReservationCreate:
+      type: object
+      required:
+        - parking_id
+        - start_time
+        - end_time
+      properties:
+        parking_id:
+          type: integer
+          example: 1
+        seat_id:
+          type: integer
+          nullable: true
+          example: 25
+        vehicle_id:
+          type: integer
+          nullable: true
+          example: 1
+        start_time:
+          type: string
+          format: date-time
+          example: "2024-01-01T10:00:00Z"
+        end_time:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:00:00Z"
+
+    QuickBookPrepareResponse:
+      type: object
+      properties:
+        parking_id:
+          type: integer
+          example: 1
+        parking_name:
+          type: string
+          example: "Bãi đỗ xe Tràng Tiền Plaza"
+        assigned_seat_id:
+          type: integer
+          example: 25
+        seat_info:
+          type: object
+          properties:
+            row:
+              type: integer
+              example: 3
+            col:
+              type: integer
+              example: 5
+        estimated_cost:
+          type: number
+          format: float
+          example: 40000
+        rate_per_hour:
+          type: number
+          format: float
+          example: 20000
+        booking_token:
+          type: string
+          description: Token to confirm the booking
+          example: "qb_token_123456"
+
+    QuickBookConfirmRequest:
+      type: object
+      required:
+        - booking_token
+        - payment_method_id
+      properties:
+        booking_token:
+          type: string
+          example: "qb_token_123456"
+        payment_method_id:
+          type: integer
+          example: 1
+        vehicle_id:
+          type: integer
+          nullable: true
+          example: 1
+
+    UserStatistics:
+      type: object
+      properties:
+        total_reservations:
+          type: integer
+          example: 25
+        total_spent:
+          type: number
+          format: float
+          example: 500000
+        total_hours:
+          type: number
+          format: float
+          example: 50.5
+        favorite_parking_id:
+          type: integer
+          nullable: true
+          example: 1
+        favorite_parking_name:
+          type: string
+          nullable: true
+          example: "Bãi đỗ xe Tràng Tiền Plaza"
+        most_visited_count:
+          type: integer
+          example: 8
+        reservations_by_status:
+          type: object
+          properties:
+            reserved:
+              type: integer
+              example: 2
+            checked_in:
+              type: integer
+              example: 1
+            completed:
+              type: integer
+              example: 22
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: Error message
+
+  responses:
+    UnauthorizedError:
+      description: Authentication token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: Invalid token
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: Resource not found

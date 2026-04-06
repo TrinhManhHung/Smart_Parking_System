@@ -1,0 +1,274 @@
+# ============================================
+# Payment Service — OpenAPI 3.0 Specification
+# ============================================
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  description: |
+    Payment Processing Service for Smart Parking System.
+    
+    This service handles:
+    - Payment calculations
+    - Fee computations
+    - Tax calculations
+    - Discount applications
+    - Payment processing logic
+    
+    All endpoints are internal and typically called by other services.
+  version: 1.0.0
+  contact:
+    name: Smart Parking Team
+
+servers:
+  - url: http://localhost:8005
+    description: Local development
+  - url: http://localhost:8000
+    description: API Gateway
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Payment
+    description: Payment calculations and processing
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /payment/calculate:
+    post:
+      tags:
+        - Payment
+      summary: Calculate payment amount
+      description: |
+        Calculate the total payment amount for a parking session including:
+        - Base parking fee based on duration and hourly rate
+        - Additional fees (if any)
+        - Taxes and service charges
+        - Discount applications
+        - Final total amount
+      operationId: calculatePayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCalculation'
+      responses:
+        '200':
+          description: Payment calculation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResult'
+        '400':
+          description: Invalid calculation parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          examples:
+            invalid_duration:
+              summary: Invalid duration
+              value:
+                detail: "Duration must be positive"
+            invalid_rate:
+              summary: Invalid rate
+              value:
+                detail: "Hourly rate must be greater than 0"
+
+components:
+  schemas:
+    PaymentCalculation:
+      type: object
+      required:
+        - parking_id
+        - duration_hours
+        - rate_per_hour
+      properties:
+        parking_id:
+          type: integer
+          description: Parking location ID
+          example: 1
+        duration_hours:
+          type: number
+          format: float
+          minimum: 0
+          description: Parking duration in hours
+          example: 2.5
+        rate_per_hour:
+          type: number
+          format: float
+          minimum: 0
+          description: Parking rate per hour in VND
+          example: 20000
+        user_id:
+          type: integer
+          nullable: true
+          description: User ID for discount calculations
+          example: 1
+        vehicle_type:
+          type: string
+          nullable: true
+          enum: [car, motorcycle, truck, van, suv]
+          description: Vehicle type for type-specific pricing
+          example: "car"
+        discount_code:
+          type: string
+          nullable: true
+          description: Discount code to apply
+          example: "FIRST_TIME_10"
+        is_member:
+          type: boolean
+          default: false
+          description: Whether user is a premium member
+          example: false
+
+    PaymentResult:
+      type: object
+      properties:
+        parking_id:
+          type: integer
+          description: Parking location ID
+          example: 1
+        duration_hours:
+          type: number
+          format: float
+          description: Actual parking duration
+          example: 2.5
+        base_amount:
+          type: number
+          format: float
+          description: Base parking fee (duration × rate)
+          example: 50000
+        additional_fees:
+          type: object
+          description: Breakdown of additional fees
+          properties:
+            service_fee:
+              type: number
+              format: float
+              example: 2000
+            tax:
+              type: number
+              format: float
+              example: 5200
+            processing_fee:
+              type: number
+              format: float
+              example: 1000
+        discounts:
+          type: object
+          description: Applied discounts
+          properties:
+            discount_code:
+              type: string
+              nullable: true
+              example: "FIRST_TIME_10"
+            discount_amount:
+              type: number
+              format: float
+              example: 5000
+            member_discount:
+              type: number
+              format: float
+              example: 0
+        total_before_discount:
+          type: number
+          format: float
+          description: Total amount before discounts
+          example: 58200
+        total_discount:
+          type: number
+          format: float
+          description: Total discount amount
+          example: 5000
+        final_amount:
+          type: number
+          format: float
+          description: Final amount to be paid
+          example: 53200
+        currency:
+          type: string
+          description: Currency code
+          example: "VND"
+        calculation_time:
+          type: string
+          format: date-time
+          description: When the calculation was performed
+          example: "2024-01-01T12:00:00Z"
+        breakdown:
+          type: object
+          description: Detailed calculation breakdown
+          properties:
+            rate_per_hour:
+              type: number
+              format: float
+              example: 20000
+            hours_charged:
+              type: number
+              format: float
+              description: Hours charged (may include minimum charge)
+              example: 2.5
+            minimum_charge_hours:
+              type: number
+              format: float
+              description: Minimum charge period
+              example: 1.0
+            tax_rate:
+              type: number
+              format: float
+              description: Tax rate as percentage
+              example: 10.0
+            service_fee_rate:
+              type: number
+              format: float
+              description: Service fee as percentage
+              example: 4.0
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: "Error message"
+
+  examples:
+    StandardCalculation:
+      summary: Standard parking calculation
+      description: Example calculation for 2.5 hours of parking
+      value:
+        parking_id: 1
+        duration_hours: 2.5
+        rate_per_hour: 20000
+        user_id: 1
+        vehicle_type: "car"
+        is_member: false
+    
+    DiscountCalculation:
+      summary: Calculation with discount
+      description: Example calculation with first-time user discount
+      value:
+        parking_id: 1
+        duration_hours: 2.5
+        rate_per_hour: 20000
+        user_id: 1
+        vehicle_type: "car"
+        discount_code: "FIRST_TIME_10"
+        is_member: false

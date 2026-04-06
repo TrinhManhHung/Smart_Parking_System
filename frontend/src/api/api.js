@@ -14,6 +14,25 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Add response interceptor to handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('token')
+      localStorage.removeItem('setupComplete')
+      // Dispatch custom event to notify App component
+      window.dispatchEvent(new Event('authChange'))
+      // Only redirect if not already on login/register page
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const authAPI = {
   register: (userData) => api.post('/register', userData),
   login: (userData) => api.post('/login', userData),
@@ -42,7 +61,8 @@ export const parkingAPI = {
 export const reservationAPI = {
   getUserReservations: () => api.get('/reservations'),
   createReservation: (reservationData) => api.post('/reservations', reservationData),
-  quickBook: (parkingId) => api.post(`/reservations/quick-book/${parkingId}`),
+  quickBookPrepare: (parkingId) => api.post(`/reservations/quick-book-prepare/${parkingId}`),
+  quickBookConfirm: (bookingData) => api.post('/reservations/quick-book-confirm', bookingData),
   getBookedSeats: (parkingId) => api.get(`/reservations/booked-seats/${parkingId}`),
   checkIn: (reservationId) => api.post(`/reservations/${reservationId}/check-in`),
   checkOut: (reservationId) => api.post(`/reservations/${reservationId}/check-out`),

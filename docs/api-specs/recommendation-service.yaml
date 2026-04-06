@@ -1,0 +1,263 @@
+# ============================================
+# Recommendation Service — OpenAPI 3.0 Specification
+# ============================================
+openapi: 3.0.3
+info:
+  title: Recommendation Service API
+  description: |
+    Parking Recommendation Service for Smart Parking System.
+    
+    This service handles:
+    - Location-based parking recommendations
+    - Distance calculations
+    - Filtering by availability, price, and distance
+    - Smart scoring and ranking algorithms
+    
+    All endpoints are public and do not require authentication.
+  version: 1.0.0
+  contact:
+    name: Smart Parking Team
+
+servers:
+  - url: http://localhost:8004
+    description: Local development
+  - url: http://localhost:8000
+    description: API Gateway
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Recommendations
+    description: Parking recommendations
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /recommendations:
+    get:
+      tags:
+        - Recommendations
+      summary: Get parking recommendations
+      description: |
+        Get parking recommendations based on user location and optional filters.
+        Results are sorted by the specified criteria and include distance calculations,
+        availability status, and recommendation scores.
+      operationId: getRecommendations
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            minimum: -90
+            maximum: 90
+          description: User's latitude coordinate
+          example: 21.0285
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            minimum: -180
+            maximum: 180
+          description: User's longitude coordinate
+          example: 105.8542
+        - name: max_distance
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+            minimum: 0
+          description: Maximum distance from user location in kilometers
+          example: 5.0
+        - name: min_available_slots
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Minimum number of available parking slots
+          example: 10
+        - name: max_price
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+            minimum: 0
+          description: Maximum price per hour in VND
+          example: 25000
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [distance, price, availability, score]
+            default: distance
+          description: |
+            Sort recommendations by:
+            - **distance**: Nearest first
+            - **price**: Cheapest first
+            - **availability**: Most available slots first
+            - **score**: Best overall score first (combines distance, price, availability)
+          example: distance
+      responses:
+        '200':
+          description: List of parking recommendations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParkingRecommendation'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          examples:
+            invalid_coordinates:
+              summary: Invalid coordinates
+              value:
+                detail: "Invalid latitude or longitude values"
+            invalid_sort:
+              summary: Invalid sort parameter
+              value:
+                detail: "sort_by must be one of: distance, price, availability, score"
+
+components:
+  schemas:
+    ParkingRecommendation:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Parking location ID
+          example: 1
+        name:
+          type: string
+          description: Parking location name
+          example: "Bãi đỗ xe Tràng Tiền Plaza"
+        address:
+          type: string
+          description: Full address of parking location
+          example: "24 Hai Bà Trưng, Hoàn Kiếm, Hà Nội"
+        latitude:
+          type: number
+          format: float
+          description: Parking location latitude
+          example: 21.0245
+        longitude:
+          type: number
+          format: float
+          description: Parking location longitude
+          example: 105.8572
+        total_slots:
+          type: integer
+          description: Total number of parking slots
+          example: 200
+        available_slots:
+          type: integer
+          description: Currently available parking slots
+          example: 45
+        rate_per_hour:
+          type: number
+          format: float
+          description: Parking rate per hour in VND
+          example: 20000
+        distance_km:
+          type: number
+          format: float
+          description: Distance from user location in kilometers
+          example: 1.2
+        walking_time_minutes:
+          type: integer
+          description: Estimated walking time in minutes
+          example: 15
+        availability_percentage:
+          type: number
+          format: float
+          description: Percentage of available slots (0-100)
+          example: 22.5
+        recommendation_score:
+          type: number
+          format: float
+          description: Overall recommendation score (0-100, higher is better)
+          example: 85.3
+        price_category:
+          type: string
+          enum: [cheap, moderate, expensive]
+          description: Price category relative to other parkings
+          example: "moderate"
+        availability_status:
+          type: string
+          enum: [high, medium, low, full]
+          description: |
+            Availability status:
+            - **high**: >50% available
+            - **medium**: 20-50% available  
+            - **low**: 1-20% available
+            - **full**: 0% available
+          example: "low"
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: "Error message"
+
+  examples:
+    HanoiRecommendations:
+      summary: Recommendations near Hoan Kiem Lake
+      description: Example recommendations for a user near Hoan Kiem Lake, Hanoi
+      value:
+        - id: 3
+          name: "Bãi đỗ xe Hồ Gươm"
+          address: "Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội"
+          latitude: 21.0288
+          longitude: 105.8524
+          total_slots: 150
+          available_slots: 30
+          rate_per_hour: 30000
+          distance_km: 0.3
+          walking_time_minutes: 4
+          availability_percentage: 20.0
+          recommendation_score: 78.5
+          price_category: "expensive"
+          availability_status: "low"
+        - id: 1
+          name: "Bãi đỗ xe Tràng Tiền Plaza"
+          address: "24 Hai Bà Trưng, Hoàn Kiếm, Hà Nội"
+          latitude: 21.0245
+          longitude: 105.8572
+          total_slots: 200
+          available_slots: 45
+          rate_per_hour: 20000
+          distance_km: 0.8
+          walking_time_minutes: 10
+          availability_percentage: 22.5
+          recommendation_score: 85.3
+          price_category: "moderate"
+          availability_status: "low"

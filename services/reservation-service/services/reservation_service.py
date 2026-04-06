@@ -48,8 +48,8 @@ class ReservationService:
         
         return db_reservation
     
-    async def quick_book(self, parking_id: int, user_id: int, db: Session):
-        """Quick book: automatically select a random available seat"""
+    async def quick_book_prepare(self, parking_id: int, user_id: int, db: Session):
+        """Prepare quick book: calculate seat and payment info without creating reservation"""
         import random
         
         # Get parking info to check available slots
@@ -93,15 +93,40 @@ class ReservationService:
         # Randomly select a seat
         selected_seat = random.choice(available_seats)
         
-        # Create reservation with auto times (now + 5 min to now + 2 hours)
+        # Create time info (now + 5 min to now + 2 hours)
         now = datetime.utcnow()
         check_in_time = now
         check_out_time = datetime.fromtimestamp(now.timestamp() + 2 * 3600)  # 2 hours later
         
+        return {
+            "parking_id": parking_id,
+            "seat_number": selected_seat,
+            "check_in_time": check_in_time.isoformat(),
+            "check_out_time": check_out_time.isoformat(),
+            "parking_info": parking_data
+        }
+    
+    async def quick_book_confirm(self, booking_data: dict, user_id: int, db: Session):
+        """Confirm quick book: create actual reservation after payment confirmation"""
+        # Parse datetime strings
+        check_in_time = datetime.fromisoformat(booking_data["check_in_time"])
+        check_out_time = datetime.fromisoformat(booking_data["check_out_time"])
+        
+        # Double-check seat is still available
+        reserved_seats = db.query(Reservation.seat_number).filter(
+            Reservation.parking_id == booking_data["parking_id"],
+            Reservation.status.in_(["reserved", "checked_in"])
+        ).all()
+        reserved_seat_numbers = {seat[0] for seat in reserved_seats if seat[0]}
+        
+        if booking_data["seat_number"] in reserved_seat_numbers:
+            raise HTTPException(status_code=400, detail="Selected seat is no longer available")
+        
+        # Create the reservation
         db_reservation = Reservation(
             user_id=user_id,
-            parking_id=parking_id,
-            seat_number=selected_seat,
+            parking_id=booking_data["parking_id"],
+            seat_number=booking_data["seat_number"],
             check_in_time=check_in_time,
             check_out_time=check_out_time,
             status="reserved"
@@ -111,7 +136,7 @@ class ReservationService:
         db.refresh(db_reservation)
         
         # Decrease available slots
-        await self._update_parking_slots(parking_id, -1)
+        await self._update_parking_slots(booking_data["parking_id"], -1)
         
         return db_reservation
     

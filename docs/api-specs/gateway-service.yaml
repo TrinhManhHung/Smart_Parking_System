@@ -1,0 +1,870 @@
+# ============================================
+# Gateway Service — OpenAPI 3.0 Specification
+# ============================================
+openapi: 3.0.3
+info:
+  title: Smart Parking System API Gateway
+  description: |
+    API Gateway for Smart Parking System - Single entry point for all client requests.
+    
+    This gateway provides:
+    - Unified API interface for all microservices
+    - Authentication and authorization
+    - Request routing and load balancing
+    - Rate limiting and security
+    - Response aggregation
+    
+    The gateway routes requests to appropriate microservices:
+    - Auth Service (8001): User authentication and profile management
+    - Parking Service (8002): Parking locations and seat management
+    - Reservation Service (8003): Booking and reservation management
+    - Recommendation Service (8004): Location-based recommendations
+    - Payment Service (8005): Payment calculations
+    
+    Authentication is required for most endpoints except public ones like registration, login, and parking listings.
+  version: 1.0.0
+  contact:
+    name: Smart Parking Team
+
+servers:
+  - url: http://localhost:8000
+    description: Local development gateway
+
+tags:
+  - name: Health
+    description: Gateway health check
+  - name: Authentication
+    description: User registration and login (proxied to Auth Service)
+  - name: Profile
+    description: User profile management (proxied to Auth Service)
+  - name: Vehicles
+    description: User vehicle management (proxied to Auth Service)
+  - name: Payment Methods
+    description: Payment methods management (proxied to Auth Service)
+  - name: Favorites
+    description: Favorite parkings management (proxied to Auth Service)
+  - name: Parkings
+    description: Parking locations and seats (proxied to Parking Service)
+  - name: Reservations
+    description: Reservation management (proxied to Reservation Service)
+  - name: Statistics
+    description: User statistics and history (proxied to Reservation Service)
+  - name: Recommendations
+    description: Parking recommendations (proxied to Recommendation Service)
+  - name: Payment
+    description: Payment calculations (proxied to Payment Service)
+
+paths:
+  /:
+    get:
+      tags:
+        - Health
+      summary: Gateway root endpoint
+      operationId: root
+      responses:
+        '200':
+          description: Gateway information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Smart Parking System API Gateway"
+                  status:
+                    type: string
+                    example: "running"
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Gateway health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Gateway is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # Authentication Endpoints (Auth Service Proxy)
+  /register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Proxied to Auth Service /register
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Proxied to Auth Service /login
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # Profile Endpoints (Auth Service Proxy)
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Get user profile
+      description: Proxied to Auth Service /profile
+      operationId: getProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    put:
+      tags:
+        - Profile
+      summary: Update user profile
+      description: Proxied to Auth Service /profile
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # Vehicle Endpoints (Auth Service Proxy)
+  /vehicles:
+    get:
+      tags:
+        - Vehicles
+      summary: Get all user vehicles
+      description: Proxied to Auth Service /vehicles
+      operationId: getVehicles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Vehicles
+      summary: Add a new vehicle
+      description: Proxied to Auth Service /vehicles
+      operationId: createVehicle
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleCreate'
+      responses:
+        '200':
+          description: Vehicle created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /vehicles/{vehicle_id}:
+    put:
+      tags:
+        - Vehicles
+      summary: Update a vehicle
+      description: Proxied to Auth Service /vehicles/{vehicle_id}
+      operationId: updateVehicle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleUpdate'
+      responses:
+        '200':
+          description: Vehicle updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    delete:
+      tags:
+        - Vehicles
+      summary: Delete a vehicle
+      description: Proxied to Auth Service /vehicles/{vehicle_id}
+      operationId: deleteVehicle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vehicle deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # Parking Endpoints (Parking Service Proxy)
+  /parkings:
+    get:
+      tags:
+        - Parkings
+      summary: Get all parking locations
+      description: Proxied to Parking Service /parkings
+      operationId: getParkings
+      responses:
+        '200':
+          description: List of all parking locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Parking'
+
+  /parkings/{parking_id}:
+    get:
+      tags:
+        - Parkings
+      summary: Get parking location by ID
+      description: Proxied to Parking Service /parkings/{parking_id}
+      operationId: getParking
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Parking location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parking'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /parkings/{parking_id}/seats:
+    get:
+      tags:
+        - Parkings
+      summary: Get all seats for a parking location
+      description: Proxied to Parking Service /parkings/{parking_id}/seats
+      operationId: getParkingSeats
+      parameters:
+        - name: parking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: start_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of seats with availability status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seat'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # Reservation Endpoints (Reservation Service Proxy)
+  /reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Get user reservations
+      description: Proxied to Reservation Service /reservations
+      operationId: getUserReservations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Reservations
+      summary: Create a new reservation
+      description: Proxied to Reservation Service /reservations
+      operationId: createReservation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+      responses:
+        '200':
+          description: Reservation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # Recommendation Endpoints (Recommendation Service Proxy)
+  /recommendations:
+    get:
+      tags:
+        - Recommendations
+      summary: Get parking recommendations
+      description: Proxied to Recommendation Service /recommendations
+      operationId: getRecommendations
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+        - name: max_distance
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: min_available_slots
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: max_price
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [distance, price, availability, score]
+            default: distance
+      responses:
+        '200':
+          description: List of parking recommendations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParkingRecommendation'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  # Payment Endpoints (Payment Service Proxy)
+  /payment/calculate:
+    post:
+      tags:
+        - Payment
+      summary: Calculate payment amount
+      description: Proxied to Payment Service /payment/calculate
+      operationId: calculatePayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCalculation'
+      responses:
+        '200':
+          description: Payment calculation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResult'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /login or /register endpoint
+
+  schemas:
+    # Auth Service Schemas
+    UserCreate:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 6
+        full_name:
+          type: string
+        phone:
+          type: string
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    UserUpdate:
+      type: object
+      properties:
+        full_name:
+          type: string
+        phone:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    VehicleCreate:
+      type: object
+      required:
+        - license_plate
+        - vehicle_type
+      properties:
+        license_plate:
+          type: string
+        vehicle_type:
+          type: string
+          enum: [car, motorcycle, truck, van]
+        brand:
+          type: string
+        model:
+          type: string
+        color:
+          type: string
+        is_default:
+          type: boolean
+          default: false
+
+    VehicleUpdate:
+      type: object
+      properties:
+        vehicle_type:
+          type: string
+          enum: [car, motorcycle, truck, van]
+        brand:
+          type: string
+        model:
+          type: string
+        color:
+          type: string
+        is_default:
+          type: boolean
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        license_plate:
+          type: string
+        vehicle_type:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    # Parking Service Schemas
+    Parking:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+          format: float
+        longitude:
+          type: number
+          format: float
+        total_slots:
+          type: integer
+        available_slots:
+          type: integer
+        rate_per_hour:
+          type: number
+          format: float
+
+    Seat:
+      type: object
+      properties:
+        id:
+          type: integer
+        parking_id:
+          type: integer
+        row:
+          type: integer
+        col:
+          type: integer
+        seat_type:
+          type: string
+        status:
+          type: string
+          enum: [available, booked]
+        price_per_hour:
+          type: number
+          format: float
+
+    # Reservation Service Schemas
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        parking_id:
+          type: integer
+        seat_id:
+          type: integer
+          nullable: true
+        vehicle_id:
+          type: integer
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        check_in_time:
+          type: string
+          format: date-time
+          nullable: true
+        check_out_time:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [reserved, checked_in, completed, cancelled]
+        total_cost:
+          type: number
+          format: float
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ReservationCreate:
+      type: object
+      required:
+        - parking_id
+        - start_time
+        - end_time
+      properties:
+        parking_id:
+          type: integer
+        seat_id:
+          type: integer
+          nullable: true
+        vehicle_id:
+          type: integer
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+
+    # Recommendation Service Schemas
+    ParkingRecommendation:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+          format: float
+        longitude:
+          type: number
+          format: float
+        total_slots:
+          type: integer
+        available_slots:
+          type: integer
+        rate_per_hour:
+          type: number
+          format: float
+        distance_km:
+          type: number
+          format: float
+        walking_time_minutes:
+          type: integer
+        availability_percentage:
+          type: number
+          format: float
+        recommendation_score:
+          type: number
+          format: float
+        price_category:
+          type: string
+          enum: [cheap, moderate, expensive]
+        availability_status:
+          type: string
+          enum: [high, medium, low, full]
+
+    # Payment Service Schemas
+    PaymentCalculation:
+      type: object
+      required:
+        - parking_id
+        - duration_hours
+        - rate_per_hour
+      properties:
+        parking_id:
+          type: integer
+        duration_hours:
+          type: number
+          format: float
+          minimum: 0
+        rate_per_hour:
+          type: number
+          format: float
+          minimum: 0
+        user_id:
+          type: integer
+          nullable: true
+        vehicle_type:
+          type: string
+          nullable: true
+          enum: [car, motorcycle, truck, van, suv]
+        discount_code:
+          type: string
+          nullable: true
+        is_member:
+          type: boolean
+          default: false
+
+    PaymentResult:
+      type: object
+      properties:
+        parking_id:
+          type: integer
+        duration_hours:
+          type: number
+          format: float
+        base_amount:
+          type: number
+          format: float
+        final_amount:
+          type: number
+          format: float
+        currency:
+          type: string
+        calculation_time:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+
+  responses:
+    UnauthorizedError:
+      description: Authentication token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequestError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

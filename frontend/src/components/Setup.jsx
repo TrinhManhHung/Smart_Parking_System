@@ -37,7 +37,17 @@ function Setup() {
       await userAPI.createVehicle(vehicleForm)
       setStep(2)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to add vehicle')
+      console.error('Vehicle creation error:', err)
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.')
+        setTimeout(() => {
+          localStorage.removeItem('token')
+          localStorage.removeItem('setupComplete')
+          window.location.href = '/login'
+        }, 2000)
+      } else {
+        setError(err.response?.data?.detail || 'Failed to add vehicle')
+      }
     } finally {
       setLoading(false)
     }
@@ -55,7 +65,17 @@ function Setup() {
       // Reload page to update app state
       window.location.href = '/dashboard'
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to add payment method')
+      console.error('Payment method creation error:', err)
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.')
+        setTimeout(() => {
+          localStorage.removeItem('token')
+          localStorage.removeItem('setupComplete')
+          window.location.href = '/login'
+        }, 2000)
+      } else {
+        setError(err.response?.data?.detail || 'Failed to add payment method')
+      }
     } finally {
       setLoading(false)
     }
