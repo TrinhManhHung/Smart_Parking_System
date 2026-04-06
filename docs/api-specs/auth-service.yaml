@@ -1,0 +1,807 @@
+# ============================================
+# Auth Service — OpenAPI 3.0 Specification
+# ============================================
+openapi: 3.0.3
+info:
+  title: Auth Service API
+  description: |
+    Authentication and User Management Service for Smart Parking System.
+    
+    This service handles:
+    - User registration and authentication
+    - User profile management
+    - Vehicle management
+    - Payment methods management
+    - Favorite parkings management
+    
+    All endpoints except /register, /login, and /health require Bearer token authentication.
+  version: 1.0.0
+  contact:
+    name: Smart Parking Team
+
+servers:
+  - url: http://localhost:8001
+    description: Local development
+  - url: http://localhost:8000
+    description: API Gateway
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Authentication
+    description: User registration and login
+  - name: Profile
+    description: User profile management
+  - name: Vehicles
+    description: User vehicle management
+  - name: Payment Methods
+    description: Payment methods management
+  - name: Favorites
+    description: Favorite parkings management
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '400':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Get user profile
+      operationId: getProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    put:
+      tags:
+        - Profile
+      summary: Update user profile
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /vehicles:
+    get:
+      tags:
+        - Vehicles
+      summary: Get all user vehicles
+      operationId: getVehicles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Vehicles
+      summary: Add a new vehicle
+      operationId: createVehicle
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleCreate'
+      responses:
+        '200':
+          description: Vehicle created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '400':
+          description: License plate already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /vehicles/{vehicle_id}:
+    put:
+      tags:
+        - Vehicles
+      summary: Update a vehicle
+      operationId: updateVehicle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Vehicle ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleUpdate'
+      responses:
+        '200':
+          description: Vehicle updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    delete:
+      tags:
+        - Vehicles
+      summary: Delete a vehicle
+      operationId: deleteVehicle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Vehicle ID
+      responses:
+        '200':
+          description: Vehicle deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vehicle deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /payment-methods:
+    get:
+      tags:
+        - Payment Methods
+      summary: Get all payment methods
+      operationId: getPaymentMethods
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of payment methods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethod'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Payment Methods
+      summary: Add a new payment method
+      operationId: createPaymentMethod
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentMethodCreate'
+      responses:
+        '200':
+          description: Payment method created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /payment-methods/{payment_id}:
+    put:
+      tags:
+        - Payment Methods
+      summary: Update a payment method
+      operationId: updatePaymentMethod
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Payment method ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentMethodUpdate'
+      responses:
+        '200':
+          description: Payment method updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    delete:
+      tags:
+        - Payment Methods
+      summary: Delete a payment method
+      operationId: deletePaymentMethod
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Payment method ID
+      responses:
+        '200':
+          description: Payment method deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Payment method deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /favorites:
+    get:
+      tags:
+        - Favorites
+      summary: Get all favorite parkings
+      operationId: getFavorites
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of favorite parkings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FavoriteParking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Favorites
+      summary: Add a parking to favorites
+      operationId: addFavorite
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteParkingCreate'
+      responses:
+        '200':
+          description: Favorite added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteParking'
+        '400':
+          description: Parking already in favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /favorites/{favorite_id}:
+    put:
+      tags:
+        - Favorites
+      summary: Update a favorite parking
+      operationId: updateFavorite
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: favorite_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Favorite ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteParkingUpdate'
+      responses:
+        '200':
+          description: Favorite updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteParking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    delete:
+      tags:
+        - Favorites
+      summary: Remove a parking from favorites
+      operationId: removeFavorite
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: favorite_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Favorite ID
+      responses:
+        '200':
+          description: Favorite removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Favorite removed successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /login or /register endpoint
+
+  schemas:
+    UserCreate:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: password123
+        full_name:
+          type: string
+          example: John Doe
+        phone:
+          type: string
+          example: "+1234567890"
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+
+    UserUpdate:
+      type: object
+      properties:
+        full_name:
+          type: string
+          example: John Doe
+        phone:
+          type: string
+          example: "+1234567890"
+        avatar_url:
+          type: string
+          format: uri
+          example: https://example.com/avatar.jpg
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        full_name:
+          type: string
+          nullable: true
+          example: John Doe
+        phone:
+          type: string
+          nullable: true
+          example: "+1234567890"
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatar.jpg
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          example: bearer
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    VehicleCreate:
+      type: object
+      required:
+        - license_plate
+        - vehicle_type
+      properties:
+        license_plate:
+          type: string
+          example: ABC-1234
+        vehicle_type:
+          type: string
+          enum: [car, motorcycle, truck, van]
+          example: car
+        brand:
+          type: string
+          example: Toyota
+        model:
+          type: string
+          example: Camry
+        color:
+          type: string
+          example: Blue
+        is_default:
+          type: boolean
+          default: false
+          example: true
+
+    VehicleUpdate:
+      type: object
+      properties:
+        vehicle_type:
+          type: string
+          enum: [car, motorcycle, truck, van]
+          example: car
+        brand:
+          type: string
+          example: Toyota
+        model:
+          type: string
+          example: Camry
+        color:
+          type: string
+          example: Blue
+        is_default:
+          type: boolean
+          example: true
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        license_plate:
+          type: string
+          example: ABC-1234
+        vehicle_type:
+          type: string
+          example: car
+        brand:
+          type: string
+          nullable: true
+          example: Toyota
+        model:
+          type: string
+          nullable: true
+          example: Camry
+        color:
+          type: string
+          nullable: true
+          example: Blue
+        is_default:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    PaymentMethodCreate:
+      type: object
+      required:
+        - method_type
+      properties:
+        method_type:
+          type: string
+          example: CREDIT CARD
+        card_number:
+          type: string
+          example: "1234567890123456"
+        card_holder:
+          type: string
+          example: JOHN DOE
+        expiry_date:
+          type: string
+          pattern: '^\d{2}/\d{2}$'
+          example: "12/25"
+        is_default:
+          type: boolean
+          default: false
+          example: true
+
+    PaymentMethodUpdate:
+      type: object
+      properties:
+        card_holder:
+          type: string
+          example: JOHN DOE
+        expiry_date:
+          type: string
+          pattern: '^\d{2}/\d{2}$'
+          example: "12/25"
+        is_default:
+          type: boolean
+          example: true
+
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        method_type:
+          type: string
+          example: CREDIT CARD
+        card_type:
+          type: string
+          description: Derived from method_type
+          example: CREDIT CARD
+        card_number:
+          type: string
+          nullable: true
+          example: "1234567890123456"
+        last_four_digits:
+          type: string
+          description: Last 4 digits of card number
+          example: "3456"
+        card_holder:
+          type: string
+          nullable: true
+          example: JOHN DOE
+        expiry_date:
+          type: string
+          nullable: true
+          example: "12/25"
+        is_default:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    FavoriteParkingCreate:
+      type: object
+      required:
+        - parking_id
+      properties:
+        parking_id:
+          type: integer
+          example: 1
+        nickname:
+          type: string
+          example: My Office Parking
+
+    FavoriteParkingUpdate:
+      type: object
+      properties:
+        nickname:
+          type: string
+          example: My Office Parking
+
+    FavoriteParking:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        parking_id:
+          type: integer
+          example: 1
+        nickname:
+          type: string
+          nullable: true
+          example: My Office Parking
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: Error message
+
+  responses:
+    UnauthorizedError:
+      description: Authentication token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: Invalid token
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: Resource not found
